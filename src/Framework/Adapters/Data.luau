@@ -230,11 +230,9 @@ end
 
 --[=[
 	Wraps the `DataService.client` singleton in a framework `Controller`.
-	`_client` is bound synchronously in `Init` so any other controller
-	that depends on this one can safely call its methods from `Start`
-	(Init runs in dependency order and is fully complete before any
-	Start runs). The upstream `init()` yields until the server pushes
-	the initial snapshot, so we keep that call in `Start`.
+	`Init` assigns `_client` and calls `bind()` so replication listeners
+	are live before any `Start` hook runs. `Start` calls `init()`, which
+	yields until the snapshot arrives (via `Init` event or `Fetch` pull).
 
 	Controllers that read data should:
 	  1. List `Dependencies = { "DataController" }`.
@@ -254,7 +252,10 @@ function Data.CreateController(options: ClientOptions?): ClientClass
 		if not RunService:IsClient() then
 			return
 		end
-		self._client = DataPackage.client
+		local client = DataPackage.client
+		self._client = client
+		-- Subscribe before `Start` so a server `Init` fired during boot is not lost.
+		client:bind()
 	end
 
 	function def:Start()

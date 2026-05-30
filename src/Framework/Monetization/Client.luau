@@ -11,10 +11,13 @@ local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 
 local Signal = require(script.Parent.Parent.Signal)
+local Types = require(script.Parent.Types)
 
 if RunService:IsServer() then
-	return {} :: any
+	return {} :: Types.ClientClass
 end
+
+type ClientClass = Types.ClientClass
 
 local Client = {
 	-- (productId, wasPurchased)
@@ -35,7 +38,7 @@ end
 --[=[
 	Connects the marketplace prompt-finished callbacks. Safe to call once.
 ]=]
-function Client.init(self: any)
+function Client.init(self: ClientClass)
 	if self._initialized then
 		return
 	end
@@ -71,18 +74,18 @@ function Client.init(self: any)
 	)
 end
 
-function Client.promptProductPurchase(self: any, productId: number)
+function Client.promptProductPurchase(self: ClientClass, productId: number)
 	MarketplaceService:PromptProductPurchase(Players.LocalPlayer, productId)
 end
 
-function Client.promptGamePassPurchase(self: any, gamePassId: number)
+function Client.promptGamePassPurchase(self: ClientClass, gamePassId: number)
 	MarketplaceService:PromptGamePassPurchase(Players.LocalPlayer, gamePassId)
 end
 
 --[=[
 	Cached `UserOwnsGamePassAsync` for the local player.
 ]=]
-function Client.ownsGamePass(self: any, gamePassId: number): boolean
+function Client.ownsGamePass(self: ClientClass, gamePassId: number): boolean
 	local cached = self._gamePassCache[gamePassId]
 	if cached ~= nil then
 		return cached
@@ -103,7 +106,7 @@ end
 --[=[
 	Cached `GetProductInfo`. `infoType` defaults to `Enum.InfoType.Product`.
 ]=]
-function Client.getProductInfo(self: any, assetId: number, infoType: Enum.InfoType?): any
+function Client.getProductInfo(self: ClientClass, assetId: number, infoType: Enum.InfoType?): any
 	local kind = infoType or Enum.InfoType.Product
 	local key = `{kind.Name}:{assetId}`
 	local cached = self._productInfoCache[key]
@@ -123,4 +126,4 @@ function Client.getProductInfo(self: any, assetId: number, infoType: Enum.InfoTy
 	return info
 end
 
-return Client
+return Client :: ClientClass

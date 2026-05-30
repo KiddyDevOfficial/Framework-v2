@@ -6,10 +6,10 @@
 	registers shared components, then boots the framework.
 
 	Layout:
-	  Controllers/     - game-logic controllers
-	  UI/Controllers/  - UI system controllers (optional)
-	  UI/Frames/       - per-frame GUI modules (optional)
-	  UI/Lib/          - helpers, not auto-registered (optional)
+	  Controllers/     - game-logic controllers (e.g. ExampleController)
+	  UI/Controllers/  - FrameController, GuiButtonController
+	  UI/Frames/       - ExampleFrame, ...
+	  UI/Lib/          - FrameStyles, FrameUtil (not auto-registered)
 ]=]
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")

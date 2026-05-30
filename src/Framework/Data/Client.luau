@@ -23,12 +23,16 @@ end
 
 type Path = Data.Path
 
+local SNAPSHOT_POLL_INTERVAL = 0.2
+local SNAPSHOT_TIMEOUT = 60
+
 local Client = {
 	_data = nil :: Data.Data?,
 	_waitSignal = Signal.new(),
 	_replicate = nil :: RemoteEvent?,
 	_fetch = nil :: RemoteFunction?,
 	_initialized = false,
+	_bound = false,
 }
 
 local function applyAction(self: any, action: number, ...: any)
@@ -54,32 +58,84 @@ local function applyAction(self: any, action: number, ...: any)
 end
 
 --[=[
-	Yields until the server pushes the initial snapshot. Safe to call
-	more than once - subsequent calls are no-ops once data is ready.
+	Connects replication listeners. Non-yielding: the remotes are resolved
+	in a background thread (`Networking.buildClient` waits on `WaitForChild`)
+	so this is safe to call from `DataController:Init`, which must not yield.
+	Calling it early ensures an `Init` event fired while the server was
+	booting is not missed; any gap is covered by the `Fetch` fallback in
+	`waitForData`.
+]=]
+function Client.bind(self: any)
+	if self._bound then
+		return
+	end
+	self._bound = true
+
+	task.spawn(function()
+		local replicate, fetch = Networking.buildClient()
+		self._replicate = replicate
+		self._fetch = fetch
+
+		replicate.OnClientEvent:Connect(function(action: number, ...: any)
+			applyAction(self, action, ...)
+		end)
+	end)
+end
+
+local function tryFetchSnapshot(self: any): boolean
+	if self._data or not self._fetch then
+		return self._data ~= nil
+	end
+
+	local ok, snapshot = pcall(function()
+		return (self._fetch :: RemoteFunction):InvokeServer(nil)
+	end)
+	if ok and type(snapshot) == "table" then
+		if self._data == nil then
+			applyAction(self, Utils.Action.Init, snapshot)
+		end
+		return true
+	end
+	return false
+end
+
+--[=[
+	Yields until the initial snapshot is available. Safe to call more than
+	once. Pulls via `Fetch` when the server already sent `Init` before this
+	client subscribed (normal in Studio / server-first boot order).
 ]=]
 function Client.init(self: any)
 	if self._initialized then
-		self:waitForData()
-		return
+		return self:waitForData()
 	end
 	self._initialized = true
-
-	local replicate, fetch = Networking.buildClient()
-	self._replicate = replicate
-	self._fetch = fetch
-
-	replicate.OnClientEvent:Connect(function(action: number, ...: any)
-		applyAction(self, action, ...)
-	end)
-
-	self:waitForData()
+	self:bind()
+	return self:waitForData()
 end
 
 function Client.waitForData(self: any): Data.Data
 	if self._data then
 		return self._data
 	end
-	self._waitSignal:wait()
+
+	self:bind()
+
+	if tryFetchSnapshot(self) then
+		return self._data
+	end
+
+	local deadline = os.clock() + SNAPSHOT_TIMEOUT
+	while not self._data and os.clock() < deadline do
+		if tryFetchSnapshot(self) then
+			break
+		end
+		task.wait(SNAPSHOT_POLL_INTERVAL)
+	end
+
+	if not self._data then
+		self._waitSignal:wait()
+	end
+
 	return self._data
 end
 

@@ -44,13 +44,15 @@ local Server = require(script.Server)
 local Client = require(script.Client)
 local Types = require(script.Types)
 
-export type Server = typeof(Server)
-export type Client = typeof(Client)
+export type Server = Types.ServerClass
+export type Client = Types.ClientClass
+export type ServerClass = Types.ServerClass
+export type ClientClass = Types.ClientClass
 export type ProductHandler = Types.ProductHandler
 export type ReceiptInfo = Types.ReceiptInfo
 export type PurchaseRecorder = Types.PurchaseRecorder
 
 return {
-	server = Server,
-	client = Client,
+	server = Server :: Types.ServerClass,
+	client = Client :: Types.ClientClass,
 }

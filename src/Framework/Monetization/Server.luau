@@ -17,9 +17,10 @@ local Signal = require(script.Parent.Parent.Signal)
 local Types = require(script.Parent.Types)
 
 if RunService:IsClient() then
-	return {} :: any
+	return {} :: Types.ServerClass
 end
 
+type ServerClass = Types.ServerClass
 type ReceiptInfo = Types.ReceiptInfo
 type ProductHandler = Types.ProductHandler
 type PurchaseRecorder = Types.PurchaseRecorder
@@ -46,7 +47,7 @@ end
 	Wires `ProcessReceipt`, game-pass purchase callbacks and player cleanup.
 	Safe to call once; subsequent calls are ignored.
 ]=]
-function Server.init(self: any)
+function Server.init(self: ServerClass)
 	if self._initialized then
 		return
 	end
@@ -84,7 +85,7 @@ end
 	Provides cross-server receipt de-duplication. Without a recorder, the
 	server only remembers purchases processed in the current session.
 ]=]
-function Server.setPurchaseRecorder(self: any, recorder: PurchaseRecorder?)
+function Server.setPurchaseRecorder(self: ServerClass, recorder: PurchaseRecorder?)
 	self._recorder = recorder
 end
 
@@ -92,13 +93,13 @@ end
 	Registers a handler for a developer product. The handler must return
 	`true` only once the grant is safely persisted.
 ]=]
-function Server.registerProduct(self: any, productId: number, handler: ProductHandler)
+function Server.registerProduct(self: ServerClass, productId: number, handler: ProductHandler)
 	assert(type(productId) == "number", "[Monetization.Server] productId must be a number")
 	assert(type(handler) == "function", "[Monetization.Server] handler must be a function")
 	self._productHandlers[productId] = handler
 end
 
-function Server.unregisterProduct(self: any, productId: number)
+function Server.unregisterProduct(self: ServerClass, productId: number)
 	self._productHandlers[productId] = nil
 end
 
@@ -155,7 +156,7 @@ end
 	Returns whether `player` owns `gamePassId`, caching the (network) result
 	for the lifetime of their session.
 ]=]
-function Server.ownsGamePass(self: any, player: Player, gamePassId: number): boolean
+function Server.ownsGamePass(self: ServerClass, player: Player, gamePassId: number): boolean
 	local cache = self._gamePassCache[player]
 	if not cache then
 		cache = {}
@@ -178,12 +179,12 @@ function Server.ownsGamePass(self: any, player: Player, gamePassId: number): boo
 	return owns
 end
 
-function Server.promptProductPurchase(self: any, player: Player, productId: number)
+function Server.promptProductPurchase(self: ServerClass, player: Player, productId: number)
 	MarketplaceService:PromptProductPurchase(player, productId)
 end
 
-function Server.promptGamePassPurchase(self: any, player: Player, gamePassId: number)
+function Server.promptGamePassPurchase(self: ServerClass, player: Player, gamePassId: number)
 	MarketplaceService:PromptGamePassPurchase(player, gamePassId)
 end
 
-return Server
+return Server :: ServerClass
