@@ -1,6 +1,35 @@
 {
   "name": "Framework",
   "tree": {
-    "$path": "src/Framework"
+    "$className": "DataModel",
+
+    "ReplicatedStorage": {
+      "Framework": {
+        "$path": "src/Framework"
+      },
+      "Shared": {
+        "$path": "src/shared"
+      }
+    },
+
+    "ServerScriptService": {
+      "Server": {
+        "$path": "src/server"
+      }
+    },
+
+    "StarterPlayer": {
+      "StarterPlayerScripts": {
+        "Client": {
+          "$path": "src/client"
+        }
+      }
+    },
+
+    "SoundService": {
+      "$properties": {
+        "RespectFilteringEnabled": true
+      }
+    }
   }
 }
