@@ -1,0 +1,11 @@
+[package]
+name = "leonardhoarau/framework"
+version = "0.3.0"
+description = "Type-first, modular :Init/:Start framework for Roblox / Luau"
+license = "MIT"
+authors = ["Leonard Hoarau"]
+registry = "https://github.com/UpliftGames/wally-index"
+realm = "shared"
+include = ["src/Framework/**", "README.md", "LICENSE", "wally.toml", "default.project.json"]
+
+[dependencies]
