@@ -13,7 +13,7 @@
 	Paths can be supplied either as a flat string (`"currency"`) or as a
 	`{ string | number }` array (`{ "tutorial", "step" }`). The latter
 	form supports nested access and array indexing.
-
+  
 	All signals are built from `Framework.Signal`, so listeners use the
 	framework's lowercase API:
 
