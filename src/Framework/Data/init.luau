@@ -1,14 +1,16 @@
 --!strict
 --[=[
 	@module Data
-	Framework-native, self-contained DataService. Replaces the
-	[`leifstout/dataservice`](https://github.com/leifstout/dataService)
-	Wally package: same shape (`{ server, client }`), zero external
-	dependencies.
+	Framework-native DataService with a
+	[`leifstout/dataservice`](https://github.com/leifstout/dataService)-style
+	shape (`{ server, client }`).
 
-	Persistence is a thin `DataStoreService` wrapper with session locking,
-	auto-save and a Studio-friendly in-memory mock; replication goes
-	through a single RemoteEvent + RemoteFunction managed under
+	Persistence is backed by
+	[MadStudioRoblox/ProfileStore](https://github.com/MadStudioRoblox/ProfileStore)
+	(vendored at `./ProfileStore.luau`) through the `Profile` adapter, giving
+	session locking, periodic auto-save, template reconciliation, a Studio mock
+	and a cross-server message queue. Replication goes through a single
+	RemoteEvent + RemoteFunction managed under
 	`ReplicatedStorage/_FrameworkDataService`.
 
 	Most users won't touch this module directly - `Framework.CreateDataService`

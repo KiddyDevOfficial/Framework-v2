@@ -1,29 +1,28 @@
 --!strict
 --[=[
 	@module Data.Profile
-	A minimal, ProfileStore-flavoured wrapper around `DataStoreService` with:
+	Persistence adapter that backs the framework DataService with MadStudio's
+	[ProfileStore](https://github.com/MadStudioRoblox/ProfileStore) (vendored
+	beside this file as `ProfileStore.luau`).
 
-	  * Session locking - atomic `UpdateAsync` claims a per-key lock keyed
-	    by a process-unique session id. If a stale (timed-out) lock exists,
-	    we steal it. If a live lock from another server is present, the
-	    load fails so callers can kick / retry.
-	  * Periodic heartbeat - the holder of the lock refreshes its
-	    timestamp every `HEARTBEAT_INTERVAL` seconds, so other servers
-	    consider the lock alive.
-	  * Auto-save - every `AUTO_SAVE_INTERVAL` seconds while the session
-	    is live, the working copy is flushed back to the store.
-	  * `Reconcile` - deep-merges missing keys from a template so adding
-	    new keys to the template propagates to existing profiles on join.
-	  * Mock mode - pure in-memory implementation backed by a module-local
-	    table. Useful in Studio with API services disabled.
+	`Data.Server` only ever touches a tiny persistence surface, so this module
+	maps that surface onto ProfileStore sessions and the rest of the data layer
+	(`Server` / `Client` / `Data` / `Networking` / `Adapters`) is unchanged:
 
-	Surface mirrors the bits of `ProfileStore.Profile` the DataService
-	consumes (`Data`, `OnSessionEnd`, `:AddUserId`, `:Reconcile`,
-	`:EndSession`).
+	  * `Profile.openStore(name, useMock, template) -> Store`
+	  * `Profile.load(store, key, template, mode, dontSave?, cancel?) -> Profile?`
+	  * `Profile.removeKey(store, key)`
+	  * `Profile.sendMessage(store, key, message) -> boolean`
+
+	Each returned profile exposes the same members the old hand-rolled wrapper
+	did - `Data`, `OnSessionEnd` (a framework `Signal`), `:AddUserId`,
+	`:Reconcile`, `:EndSession` - plus `:setMessageHandler` so the server can
+	bridge ProfileStore's cross-server message queue to `addGlobalCallback`.
+
+	ProfileStore handles session locking, periodic auto-save, reconciliation
+	against the template, and the `BindToClose` flush for us.
 ]=]
 
-local DataStoreService = game:GetService("DataStoreService")
-local HttpService = game:GetService("HttpService")
 local RunService = game:GetService("RunService")
 
 local Signal = require(script.Parent.Parent.Signal)
@@ -31,55 +30,33 @@ local Signal = require(script.Parent.Parent.Signal)
 local Profile = {}
 Profile.__index = Profile
 
-local SESSION_ID = HttpService:GenerateGUID(false)
-
-local SESSION_TIMEOUT = 60
-local HEARTBEAT_INTERVAL = 30
-local AUTO_SAVE_INTERVAL = 60
-
-local mockStores: { [string]: { [string]: any } } = {}
+export type Mode = "session" | "view"
 
 export type Store = {
-	_kind: "real",
-	_store: DataStore,
-} | {
-	_kind: "mock",
-	_name: string,
+	_ps: any,
+	_useMock: boolean,
 }
 
 export type Profile = typeof(setmetatable(
 	{} :: {
 		Data: any,
 		OnSessionEnd: Signal.Signal<>,
-		_store: Store,
-		_key: string,
-		_userIds: { number },
+		_profile: any,
+		_isView: boolean,
 		_ended: boolean,
-		_dontSave: boolean,
-		_heartbeatThread: thread?,
-		_autoSaveThread: thread?,
 	},
 	Profile
 ))
 
-local function now(): number
-	return os.time()
-end
+-- ProfileStore is server-only and self-initialises a Heartbeat/BindToClose
+-- loop on require, so pull it in lazily from the server-only `openStore`.
+local ProfileStore: any = nil
 
-local function deepReconcile(target: any, template: any)
-	if type(template) ~= "table" then
-		return
+local function requireProfileStore(): any
+	if not ProfileStore then
+		ProfileStore = require(script.Parent.ProfileStore) :: any
 	end
-	for key, templateValue in template do
-		if type(templateValue) == "table" then
-			if type(target[key]) ~= "table" then
-				target[key] = {}
-			end
-			deepReconcile(target[key], templateValue)
-		elseif target[key] == nil then
-			target[key] = templateValue
-		end
-	end
+	return ProfileStore
 end
 
 local function deepCopy(value: any): any
@@ -93,216 +70,149 @@ local function deepCopy(value: any): any
 	return copy
 end
 
--- ── Store abstraction ─────────────────────────────────────────────────────
-
-local function openStore(name: string, useMock: boolean): Store
-	if useMock then
-		mockStores[name] = mockStores[name] or {}
-		return { _kind = "mock", _name = name } :: Store
-	end
-	return { _kind = "real", _store = DataStoreService:GetDataStore(name) } :: Store
+-- `ProfileStore.Mock` mirrors every store method against an in-memory
+-- DataStore, which is what we want when `useMock` is set (Studio with API
+-- services disabled). Note its `StartSessionAsync` ignores the params table,
+-- but mock sessions never conflict so the `Cancel` guard is real-store only.
+local function realmOf(store: Store): any
+	return if store._useMock then store._ps.Mock else store._ps
 end
 
-local function storeUpdate(store: Store, key: string, transform: (any) -> any): any
-	if store._kind == "mock" then
-		local bucket = mockStores[store._name]
-		local newValue = transform(bucket[key])
-		if newValue ~= nil then
-			bucket[key] = newValue
-		end
-		return newValue
-	end
-	local result
-	local ok, err = pcall(function()
-		result = (store :: any)._store:UpdateAsync(key, function(prev)
-			return transform(prev)
+local function wrap(psProfile: any, isView: boolean, template: any): Profile
+	local data = if psProfile ~= nil then psProfile.Data else deepCopy(template)
+
+	local self: Profile = setmetatable({
+		Data = data,
+		OnSessionEnd = Signal.new(),
+		_profile = psProfile,
+		_isView = isView,
+		_ended = false,
+	}, Profile) :: any
+
+	if psProfile ~= nil and not isView then
+		psProfile.OnSessionEnd:Connect(function()
+			if self._ended then
+				return
+			end
+			self._ended = true
+			self.OnSessionEnd:fire()
 		end)
-	end)
-	if not ok then
-		error(`Profile DataStore UpdateAsync failed for '{key}': {err}`, 0)
 	end
-	return result
+
+	return self
 end
 
-local function storeRemove(store: Store, key: string)
-	if store._kind == "mock" then
-		mockStores[store._name][key] = nil
-		return
+--[=[
+	Builds a ProfileStore for `name`. The template is bound at store-creation
+	time because ProfileStore reconciles `Profile.Data` against it.
+]=]
+function Profile.openStore(name: string, useMock: boolean, template: any): Store
+	assert(RunService:IsServer(), "DataService.Profile can only open a store on the server")
+	assert(type(template) == "table", "DataService.Profile.openStore: template table is required")
+	local PS = requireProfileStore()
+	return {
+		_ps = PS.New(name, template),
+		_useMock = useMock == true,
+	}
+end
+
+--[=[
+	Starts a ProfileStore session (`mode == "session"`) or loads a read-only
+	snapshot (`mode == "view"`).
+
+	  * Session mode returns `nil` only when the session could not be started
+	    (e.g. the `cancel` guard fired because the player already left).
+	  * View mode never blocks another server and never saves; if the key has
+	    no saved data yet it hands back an in-memory, template-shaped snapshot
+	    so callers still get a usable (but non-persistent) `Data` table.
+]=]
+function Profile.load(
+	store: Store,
+	key: string,
+	template: any,
+	mode: Mode,
+	_dontSave: boolean?,
+	cancel: (() -> boolean)?
+): Profile?
+	local realm = realmOf(store)
+
+	if mode == "view" then
+		local psProfile = realm:GetAsync(key)
+		return wrap(psProfile, true, template)
 	end
+
+	local psProfile
+	if store._useMock then
+		psProfile = realm:StartSessionAsync(key)
+	else
+		psProfile = realm:StartSessionAsync(key, { Cancel = cancel })
+	end
+
+	if psProfile == nil then
+		return nil
+	end
+
+	return wrap(psProfile, false, template)
+end
+
+function Profile.removeKey(store: Store, key: string)
+	local realm = realmOf(store)
 	local ok, err = pcall(function()
-		(store :: any)._store:RemoveAsync(key)
+		realm:RemoveAsync(key)
 	end)
 	if not ok then
 		warn(`[Framework.DataService] RemoveAsync failed for '{key}': {err}`)
 	end
 end
 
--- ── Lifecycle ──────────────────────────────────────────────────────────────
-
-local function buildEntry(template: any, existing: any?): any
-	local entry = existing or { data = deepCopy(template), userIds = {} }
-	entry.data = entry.data or deepCopy(template)
-	entry.userIds = entry.userIds or {}
-	deepReconcile(entry.data, template)
-	return entry
-end
-
 --[=[
-	Attempts to claim the session lock and load the profile.
-
-	  * `mode = "session"` - full session lifecycle (locks the key, will be
-	    written back). Returns `nil` if another live server still holds it.
-	  * `mode = "view"`    - read-only snapshot (no lock taken, no writes).
-
-	Returns `(profile, snapshot)` on success.
+	Posts a message to the profile under `key` via ProfileStore's cross-server
+	message queue. Delivered to handlers registered with `:setMessageHandler`.
 ]=]
-function Profile.load(
-	store: Store,
-	key: string,
-	template: any,
-	mode: "session" | "view",
-	dontSave: boolean?
-): Profile?
-	local entry
-	local locked = false
-
-	if mode == "view" then
-		entry = storeUpdate(store, key, function(prev)
-			return buildEntry(template, prev)
-		end)
-		entry.lock = nil
-	else
-		entry = storeUpdate(store, key, function(prev)
-			local existing = buildEntry(template, prev)
-			local lock = existing.lock
-			local timedOut = lock and (now() - (lock.timestamp or 0)) > SESSION_TIMEOUT
-			if lock and lock.sessionId ~= SESSION_ID and not timedOut then
-				return nil
-			end
-			existing.lock = { sessionId = SESSION_ID, timestamp = now() }
-			return existing
-		end)
-		if entry == nil then
-			return nil
-		end
-		locked = true
+function Profile.sendMessage(store: Store, key: string, message: any): boolean
+	local realm = realmOf(store)
+	local ok, result = pcall(function()
+		return realm:MessageAsync(key, message)
+	end)
+	if not ok then
+		warn(`[Framework.DataService] MessageAsync failed for '{key}': {result}`)
+		return false
 	end
-
-	local self: Profile = setmetatable({
-		Data = entry.data,
-		OnSessionEnd = Signal.new(),
-		_store = store,
-		_key = key,
-		_userIds = entry.userIds or {},
-		_ended = false,
-		_dontSave = dontSave == true or mode == "view",
-	}, Profile) :: any
-
-	if locked then
-		self:_startBackgroundLoops()
-	end
-
-	return self
+	return result == true
 end
 
-function Profile._startBackgroundLoops(self: Profile)
-	self._heartbeatThread = task.spawn(function()
-		while not self._ended do
-			task.wait(HEARTBEAT_INTERVAL)
-			if self._ended then
-				return
-			end
-			local ok, err = pcall(function()
-				storeUpdate(self._store, self._key, function(prev)
-					if not prev or not prev.lock then
-						return nil
-					end
-					if prev.lock.sessionId ~= SESSION_ID then
-						return nil
-					end
-					prev.lock.timestamp = now()
-					return prev
-				end)
-			end)
-			if not ok then
-				warn(`[Framework.DataService] Heartbeat failed for '{self._key}': {err}`)
-			end
-		end
-	end)
-
-	self._autoSaveThread = task.spawn(function()
-		while not self._ended do
-			task.wait(AUTO_SAVE_INTERVAL)
-			if self._ended then
-				return
-			end
-			self:Save()
-		end
-	end)
-end
+-- ── Per-profile surface consumed by Data.Server ────────────────────────────
 
 function Profile.AddUserId(self: Profile, userId: number)
-	if table.find(self._userIds, userId) then
-		return
+	if self._profile then
+		self._profile:AddUserId(userId)
 	end
-	table.insert(self._userIds, userId)
 end
 
 function Profile.Reconcile(self: Profile)
-end
-
-function Profile.Save(self: Profile)
-	if self._dontSave or self._ended then
-		return
-	end
-	local ok, err = pcall(function()
-		storeUpdate(self._store, self._key, function(prev)
-			if prev and prev.lock and prev.lock.sessionId ~= SESSION_ID then
-				return nil
-			end
-			local entry = prev or {}
-			entry.data = deepCopy(self.Data)
-			entry.userIds = table.clone(self._userIds)
-			entry.lock = { sessionId = SESSION_ID, timestamp = now() }
-			return entry
-		end)
-	end)
-	if not ok then
-		warn(`[Framework.DataService] Save failed for '{self._key}': {err}`)
+	if self._profile then
+		self._profile:Reconcile()
+		-- Reconcile mutates Data in place; refresh our cached reference anyway.
+		self.Data = self._profile.Data
 	end
 end
 
 function Profile.EndSession(self: Profile)
-	if self._ended then
+	if self._isView or self._ended or not self._profile then
 		return
 	end
-	self._ended = true
-
-	if not self._dontSave then
-		local ok, err = pcall(function()
-			storeUpdate(self._store, self._key, function(prev)
-				if prev and prev.lock and prev.lock.sessionId ~= SESSION_ID then
-					return nil
-				end
-				local entry = prev or {}
-				entry.data = deepCopy(self.Data)
-				entry.userIds = table.clone(self._userIds)
-				entry.lock = nil
-				return entry
-			end)
-		end)
-		if not ok then
-			warn(`[Framework.DataService] Final save failed for '{self._key}': {err}`)
-		end
-	end
-
-	self.OnSessionEnd:fire()
-	self.OnSessionEnd:destroy()
+	self._profile:EndSession()
 end
 
--- ── Store factory + sentinels ──────────────────────────────────────────────
-
-Profile.openStore = openStore
-Profile.removeKey = storeRemove
+--[=[
+	Registers a ProfileStore message handler. `fn(message, processed)` is
+	called for each queued/incoming message; call `processed()` to consume it.
+]=]
+function Profile.setMessageHandler(self: Profile, fn: (message: any, processed: () -> ()) -> ())
+	if self._isView or not self._profile then
+		return
+	end
+	self._profile:MessageHandler(fn)
+end
 
 return Profile

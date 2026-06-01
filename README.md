@@ -10,14 +10,36 @@ CollectionService-driven component runtime.
 - **Component** — per-`Instance` module bound by tag (`:Construct`, `:Start`, `:Stop`, …).
 - **Loader** — discovery, dependency-aware bootstrap, lifecycle binding.
 - **Signal\<T...\>** — generic, type-safe events.
+- **Networking** — typed remote banks (`Event`, `UnreliableEvent`, `Request`).
+- **DataService** — persistent, auto-replicated player data backed by a
+  vendored [ProfileStore](https://github.com/MadStudioRoblox/ProfileStore),
+  via `CreateDataService` / `CreateDataController`.
+- **Monetization** — `MarketplaceService` wrapper (products, passes, receipts),
+  via `CreateMonetizationService` / `CreateMonetizationController`.
+- **Util** — `Trove`, `TableUtil`, `StringUtil`, `NumberUtil`, `Debounce`,
+  `Timer`, `Promise`, `Observer`, `GuiButton` (CollectionService tag `Button`).
 - **Enum** — immutable, comparable enumerations.
 - **Symbol** — opaque identity tokens.
 - **Types** — `Option<T>`, `Result<T, E>`, helpers.
-- **DataService** — persistent, auto-replicated player data built directly
-  into the framework (no external dependencies), wrapped as a framework
-  `Service` + `Controller` so it boots in dependency order.
 
 Fully `--!strict`. Passes `luau-lsp analyze` with zero warnings.
+
+### API overview
+
+Everything below is on the root `Framework` table (also available as
+`Framework.Modular`, `Framework.Util`, etc. where noted).
+
+| Category | Functions / modules |
+| --- | --- |
+| **Modular** | `CreateService`, `CreateController`, `CreateComponent`, `AddIn`, `AddServices`, `AddControllers`, `AddComponents`, `RegisterService`, `RegisterController`, `RegisterComponent`, `GetService`, `GetController`, `GetComponent`, `GetComponentInstance`, `GetComponentInstances`, `Start`, `Stop`, `IsStarted`, `OnStart`, `IsService`, `IsController`, `IsComponent` |
+| **Data** | `CreateDataService`, `CreateDataController`, `DataService` (`{ server, client }`) |
+| **Monetization** | `CreateMonetizationService`, `CreateMonetizationController`, `Monetization` (`{ server, client }`) |
+| **Core** | `Signal`, `Networking`, `Enum`, `Symbol`, `Types` |
+| **Util** (also top-level) | `Util`, `Trove`, `TableUtil`, `StringUtil`, `NumberUtil`, `Debounce`, `Timer`, `Promise`, `Observer`, `GuiButton` |
+
+**Typed requires (recommended):** service/controller modules already *are*
+the singleton. Prefer `require(path.to.DataService)` over
+`Framework.GetService("DataService")` so Luau infers methods without casts.
 
 ---
 
@@ -173,13 +195,19 @@ Each tagged `Instance` gets its own lightweight component table. The
 framework presets `self.Instance` and routes method lookups to the
 definition for you.
 
+**Folder convention:** place modules under `ReplicatedStorage.Shared.Components`
+and call `Framework.AddComponents(thatFolder)`. The loader stamps each
+returned table automatically: `Name` defaults to the `ModuleScript` name,
+`Tag` defaults to `Name` when omitted. You can return a plain table with
+only `Tag` set — no need to call `CreateComponent` yourself.
+
 ```lua
-local Turret = Framework.CreateComponent({
-    Name = "Turret",
+-- src/shared/Components/Turret.luau
+local Turret = {
     Tag = "Turret",
     -- Ancestor = workspace,                       -- optional
     -- Predicate = function(inst) return ... end,  -- optional
-})
+}
 
 function Turret:Construct()
     -- self.Instance is preset by the framework
@@ -193,14 +221,35 @@ function Turret:Stop() end
 return Turret
 ```
 
+Manual registration still works:
+
+```lua
+local Turret = Framework.CreateComponent({
+    Name = "Turret",
+    Tag = "Turret",
+})
+```
+
 `Options`:
 
 | Field | Description |
 | --- | --- |
-| `Name: string` | Unique component identifier (required). |
-| `Tag: string` | CollectionService tag (required). |
+| `Name: string` | Unique component identifier (defaults to module name when scanned). |
+| `Tag: string` | CollectionService tag (defaults to `Name`). |
 | `Ancestor: Instance?` | Restrict to descendants of this Instance. |
 | `Predicate: (Instance) -> boolean?` | Per-Instance filter. |
+
+#### Shipped example components
+
+| Component | Tag | Notes |
+| --- | --- | --- |
+| `ExampleComponent` | `ExampleComponent` | Starter template; no gameplay logic. |
+| `SpinModel` | `SpinModel` | Rotates a tagged `Model` or `BasePart` on local Y. Optional `SpinSpeed` attribute (degrees/sec, default `45`; negative reverses). |
+
+```lua
+-- Studio: tag a Model/BasePart with "SpinModel", set SpinSpeed = 120 if desired.
+local spin = Framework.GetComponentInstance("SpinModel", workspace.Sign)
+```
 
 ### Dependencies
 
@@ -285,28 +334,32 @@ Framework.Stop()                   -- tears down connections + calls every Stop 
 
 ## DataService
 
-The framework ships a built-in DataService modeled after
-[`leifstout/dataservice`](https://github.com/leifstout/dataService), but
-rewritten on top of the framework's own primitives — `Framework.Signal` for
-events, plain `DataStoreService` (with session locking, heartbeat, auto-save
-and a Studio mock) for persistence, and a single replication
-`RemoteEvent`/`RemoteFunction` under `ReplicatedStorage/_FrameworkDataService`.
-Zero external Wally dependencies.
+The framework ships a built-in DataService with a `leifstout/dataservice`-style
+API: a per-player reactive `Data` tree (path reads/writes + change signals) and
+a single replication `RemoteEvent`/`RemoteFunction` under
+`ReplicatedStorage/_FrameworkDataService`. Persistence is backed by
+[MadStudioRoblox/ProfileStore](https://github.com/MadStudioRoblox/ProfileStore)
+(Apache-2.0), vendored at `src/Framework/Data/ProfileStore.luau`, which provides
+session locking, periodic auto-save, reconciliation against your template, the
+`BindToClose` flush, and a cross-server message queue. No Wally dependency — the
+module is bundled in-tree.
 
 Two adapter factories fold it into the modular lifecycle:
 
 ### Server — `Framework.CreateDataService`
 
 ```lua
--- src/server/Services/Data.luau
+-- src/server/Services/DataService.luau
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Framework = require(ReplicatedStorage.Framework)
 local Template = require(ReplicatedStorage.Shared.DataTemplate)
 
+export type Class = Framework.DataServiceClass
+
 return Framework.CreateDataService({
-    -- Name = "DataService",            -- default
+    Name = "DataService",
     Template = Template,
-    ProfileStoreIndex = "Production",
+    ProfileStoreIndex = "PlayerData",
     -- UseMock = true,                  -- toggle in Studio
 })
 ```
@@ -344,11 +397,13 @@ Framework.CreateDataService({
 ### Client — `Framework.CreateDataController`
 
 ```lua
--- src/client/Controllers/Data.luau
+-- src/client/Controllers/DataController.luau
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Framework = require(ReplicatedStorage.Framework)
 
-return Framework.CreateDataController()  -- Name defaults to "DataController"
+export type Class = Framework.DataControllerClass
+
+return Framework.CreateDataController({ Name = "DataController" })
 ```
 
 `DataService.client:init` yields until the server pushes the initial snapshot,
@@ -376,32 +431,173 @@ Framework.DataService.client:getChangedSignal({ "settings", "musicVolume" })
     :connect(function(volume) ... end)
 ```
 
+### Cross-server messaging
+
+Because persistence is backed by ProfileStore, the `addGlobalCallback` /
+`sendGlobalMessage` pair is fully functional (it bridges ProfileStore's
+`MessageAsync` / `MessageHandler` queue):
+
+```lua
+local Data = Framework.GetService("DataService")
+
+-- Register on every server that should react to the message.
+Data:AddGlobalCallback("GiftGems", function(player, payload)
+    Data:Update(player, "gems", function(g) return g + payload.amount end)
+    return true   -- return true to consume the message from the queue
+end)
+
+-- Send from anywhere (any server). Delivered now if the target is online,
+-- or queued until their next session if they're offline.
+Data:SendGlobalMessage("GiftGems", targetUserId, { amount = 500 })
+```
+
 ### Storage backend
 
-  * On the server, profiles are stored in `DataStoreService` under the name
-    given by `ProfileStoreIndex` (default `"PlayerData"`), keyed by
+  * Profiles live in `DataStoreService` under the name given by
+    `ProfileStoreIndex` (default `"PlayerData"`), keyed by
     `<ProfileStoreDataPrefix><UserId>` (default prefix `"PLAYER_"`).
-  * Session locking is implemented via the lock field on each entry plus a
-    process-unique session id. If a second server tries to claim a live lock
-    that's still being heartbeated, the player is kicked with a
-    *"Profile load failed (session locked)"* message so the original session
-    keeps ownership.
-  * Setting `UseMock = true` (the sample template does this in Studio)
-    short-circuits all `DataStoreService` calls to a per-process in-memory
-    dictionary, which is what you want when API services are disabled.
-  * On `game:BindToClose`, every live profile is end-sessioned (saved and
-    unlocked) before the process exits.
+  * Session locking, periodic auto-save, template reconciliation and the
+    `BindToClose` save flush are all handled by ProfileStore. While a session
+    is starting, the framework passes a `Cancel` guard so the attempt is
+    abandoned if the player leaves; if the session ultimately can't be started
+    the player is kicked with *"Profile load failed (please rejoin)"*.
+  * `Set` / `Update` / `ArrayInsert` / `ArrayRemove` mutate `Profile.Data`
+    in place, so ProfileStore persists them on its next auto-save (or on
+    session end) — no manual save call needed.
+  * `UseMock = true` routes everything through `ProfileStore.Mock`
+    (an in-memory store), which is what you want in Studio with API services
+    disabled.
 
-### Not supported (vs. ProfileStore upstream)
+### Advanced ProfileStore features
 
-The built-in implementation is intentionally small. If you need the more
-advanced ProfileStore features below, swap `DataPackage` in
-`src/Framework/Adapters/Data.luau` for the original Wally package instead:
+ProfileStore also offers versioned reads (`:GetAsync` / `:VersionQuery`),
+`RobloxMetaData`, `LastSavedData` (for receipt handling), and more. These aren't
+surfaced through the adapter today; to use them, extend the thin adapter in
+`src/Framework/Data/Profile.luau` (which wraps each ProfileStore profile) and
+`src/Framework/Data/Server.luau`. `DataService:GetProfile(player)` returns the
+framework profile wrapper, whose `.Data` is the same table ProfileStore saves.
 
-  * `addGlobalCallback` / `sendGlobalMessage` — surfaced as stubs that
-    `error()` if called, since raw DataStores have no built-in message queue.
-  * Versioned profile migrations.
-  * Mock/real toggle per profile (mock is process-wide here).
+---
+
+## Networking
+
+Typed remotes grouped into **banks**. Define a shared module once, require it
+on server and client. Remotes are created under
+`ReplicatedStorage._FrameworkNetworking/<BankName>/`.
+
+```lua
+-- src/shared/Networks/PlayerNet.luau
+local Networking = require(ReplicatedStorage.Framework).Networking
+local Bank = Networking.Bank("Player")
+
+export type UpdateFieldArgs = { Field: string, Value: any }
+
+return {
+    UpdateField = Bank:Event("UpdateField") :: Networking.Event<UpdateFieldArgs>,
+    GetSnapshot = Bank:Request("GetSnapshot") :: Networking.Request<nil, { [string]: any }>,
+    MoveHint    = Bank:UnreliableEvent("MoveHint") :: Networking.UnreliableEvent<Vector3>,
+}
+```
+
+```lua
+-- Server
+local Net = require(ReplicatedStorage.Shared.Networks.PlayerNet)
+Net.UpdateField:OnServerEvent(function(player, args) ... end)
+Net.GetSnapshot:OnServerInvoke(function(player, _args) return {} end)
+
+-- Client
+Net.UpdateField:FireServer({ Field = "currency", Value = 100 })
+local snap = Net.GetSnapshot:InvokeServer(nil)
+```
+
+Packet kinds: `Bank:Event` (reliable `RemoteEvent`), `Bank:UnreliableEvent`
+(`UnreliableRemoteEvent`), `Bank:Request` (`RemoteFunction`).
+
+---
+
+## Monetization
+
+Framework-native `MarketplaceService` layer: developer products
+(`ProcessReceipt` handlers), game passes, and purchase signals. No Wally deps.
+
+### Server — `Framework.CreateMonetizationService`
+
+```lua
+-- src/server/Services/MonetizationService.luau
+local Framework = require(ReplicatedStorage.Framework)
+
+local MonetizationService = Framework.CreateMonetizationService({
+    Name = "MonetizationService",
+})
+
+function MonetizationService:Init()
+    -- base Init boots Monetization.server
+    self:RegisterProduct(123456, function(player, receipt)
+        -- grant consumable; return true once persisted
+        return true
+    end)
+end
+
+return MonetizationService
+```
+
+```lua
+local Monetization = require(ServerScriptService.Server.Services.MonetizationService)
+
+Monetization:RegisterProduct(123456, function(player, receipt) return true end)
+Monetization:PromptProductPurchase(player, 123456)
+if Monetization:OwnsGamePass(player, 987654) then ... end
+
+Monetization.ProductPurchased:connect(function(player, productId) ... end)
+```
+
+### Client — `Framework.CreateMonetizationController`
+
+```lua
+return Framework.CreateMonetizationController({ Name = "MonetizationController" })
+```
+
+```lua
+local Monetization = Framework.GetController("MonetizationController")
+Monetization:PromptGamePassPurchase(987654)
+Monetization.GamePassPurchaseFinished:connect(function(id, purchased) ... end)
+```
+
+### Direct access
+
+```lua
+local Monetization = require(ReplicatedStorage.Framework).Monetization
+Monetization.server:init()
+Monetization.server:registerProduct(123456, handler)
+Monetization.client:init()
+Monetization.client:promptGamePassPurchase(987654)
+```
+
+---
+
+## Util
+
+Re-exported on `Framework` and grouped under `Framework.Util`.
+
+| Module | Purpose |
+| --- | --- |
+| `Trove` | Connection/instance cleanup (`add`, `connect`, `destroy`). |
+| `TableUtil` | Deep copy, merge, diff helpers. |
+| `StringUtil` | String formatting / parsing helpers. |
+| `NumberUtil` | Clamping, lerping, rounding helpers. |
+| `Debounce` | Leading/trailing debounce for callbacks. |
+| `Timer` | Heartbeat-driven timers with pause/resume. |
+| `Promise` | Lightweight promise type for async flows. |
+| `Observer` | Typed observable value (`set`, `observe`, `Changed` signal). |
+| `GuiButton` | Hover/press tweens + sounds for GUI tagged `Button`. Optional `SizeFactor` attribute. |
+
+```lua
+local Trove = Framework.Trove
+local master = Trove.new()
+master:add(workspace.ChildAdded:Connect(...))
+
+Framework.GuiButton.bindTagged()  -- all CollectionService "Button" tags
+```
 
 ---
 
@@ -483,32 +679,28 @@ assert(Symbol.unique("None") ~= NONE)            -- true (always fresh)
 ```
 src/
 ├── Framework/                        ← the package
-│   ├── init.luau
+│   ├── init.luau                     ← public API surface
 │   ├── Signal.luau
 │   ├── Symbol.luau
 │   ├── Enum.luau
 │   ├── Types.luau
 │   ├── DataService.luau              ← thin re-export of Data/
-│   ├── Data/
-│   │   ├── init.luau                 ← { server, client, Data }
-│   │   ├── Data.luau                 ← reactive data tree
-│   │   ├── Profile.luau              ← DataStore session lock + auto-save
-│   │   ├── Networking.luau           ← RemoteEvent / RemoteFunction broker
-│   │   ├── Server.luau               ← server singleton
-│   │   ├── Client.luau               ← client singleton
-│   │   └── Utils.luau                ← shared action enum
+│   ├── Data/                         ← player data (server / client / Data tree)
+│   │   ├── Profile.luau              ← ProfileStore persistence adapter
+│   │   └── ProfileStore.luau         ← vendored MadStudio/ProfileStore
+│   ├── Networking/                   ← typed remote banks
+│   ├── Monetization/                 ← MarketplaceService wrapper
 │   ├── Adapters/
-│   │   └── Data.luau                 ← CreateDataService / CreateDataController
-│   └── Modular/
-│       ├── init.luau
-│       ├── Lifecycle.luau
-│       ├── Service.luau
-│       ├── Controller.luau
-│       ├── Component.luau
-│       └── Loader.luau
-├── client/      ← your client code
-├── server/      ← your server code
-└── shared/      ← your shared code
+│   │   ├── Data.luau                 ← CreateDataService / CreateDataController
+│   │   └── Monetization.luau         ← CreateMonetizationService / Controller
+│   ├── Util/                         ← Trove, Observer, GuiButton, …
+│   └── Modular/                      ← Service, Controller, Component, Loader
+├── client/                           ← your client code
+├── server/                           ← your server code
+└── shared/
+    ├── Components/                   ← SpinModel, ExampleComponent, …
+    ├── DataTemplate.luau
+    └── Networks/                     ← optional typed remote modules
 ```
 
 - `default.project.json` — development place, mounts Framework + empty user folders.

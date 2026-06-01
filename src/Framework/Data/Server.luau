@@ -43,11 +43,14 @@ export type Options = {
 local DEFAULT_INDEX = "PlayerData"
 local DEFAULT_PREFIX = "PLAYER_"
 
+type GlobalCallback = (player: Player, data: { any }) -> boolean?
+
 local Server = {
 	_profiles = {} :: { [Player]: Profile },
 	_data = {} :: { [Player]: Data.Data },
 	_waitSignals = {} :: { [Player]: Signal.Signal<> },
 	_removalCallbacks = {} :: { (player: Player, data: any) -> () },
+	_messageHandlers = {} :: { [string]: { GlobalCallback } },
 	_initialized = false,
 	_replicate = nil :: RemoteEvent?,
 	_fetch = nil :: RemoteFunction?,
@@ -58,6 +61,33 @@ local Server = {
 local function keyForUserId(self: any, userId: number | string): string
 	local prefix = (self.options :: Options).profileStoreDataPrefix or DEFAULT_PREFIX
 	return prefix .. tostring(userId)
+end
+
+-- Fan a ProfileStore message out to the matching `addGlobalCallback` handlers.
+-- Messages are tagged `{ key = <callbackKey>, data = <payload> }` by
+-- `sendGlobalMessage`. The message is consumed (dropped from the queue) once
+-- at least one handler returns `true`.
+local function dispatchGlobalMessage(self: any, player: Player, message: any, processed: () -> ())
+	if type(message) ~= "table" or type(message.key) ~= "string" then
+		processed()
+		return
+	end
+	local handlers = self._messageHandlers[message.key]
+	if not handlers then
+		return
+	end
+	local consumed = false
+	for _, callback in handlers do
+		local ok, result = pcall(callback, player, message.data)
+		if not ok then
+			warn(`[Framework.DataService] global callback '{message.key}' errored: {result}`)
+		elseif result == true then
+			consumed = true
+		end
+	end
+	if consumed then
+		processed()
+	end
 end
 
 -- Hook the per-player setup pipeline.
@@ -71,14 +101,25 @@ local function attachPlayer(self: any, player: Player)
 	end
 
 	local mode: "session" | "view" = if opts.viewedUserId or opts.dontSave then "view" else "session"
-	local profile = Profile.load(self.store, key, opts.template, mode, opts.dontSave)
+	-- Cancel the ProfileStore session attempt if the player leaves while we are
+	-- waiting out a session conflict from another server.
+	local cancel = function()
+		return not player:IsDescendantOf(Players)
+	end
+	local profile = Profile.load(self.store, key, opts.template, mode, opts.dontSave, cancel)
 	if not profile then
-		player:Kick("Profile load failed (session locked) - please rejoin")
+		player:Kick("Profile load failed (please rejoin)")
 		return
 	end
 
 	profile:AddUserId(userId)
 	profile:Reconcile()
+
+	-- Bridge ProfileStore's cross-server message queue to addGlobalCallback.
+	profile:setMessageHandler(function(message: any, processed: () -> ())
+		dispatchGlobalMessage(self, player, message, processed)
+	end)
+
 	profile.OnSessionEnd:connect(function()
 		self._profiles[player] = nil
 		if player:IsDescendantOf(Players) then
@@ -155,7 +196,11 @@ function Server.init(self: any, options: Options)
 
 	self._initialized = true
 	self.options = options
-	self.store = Profile.openStore(options.profileStoreIndex or DEFAULT_INDEX, options.useMock == true)
+	self.store = Profile.openStore(
+		options.profileStoreIndex or DEFAULT_INDEX,
+		options.useMock == true,
+		options.template
+	)
 
 	local replicate, fetch = Networking.buildServer()
 	self._replicate = replicate
@@ -292,27 +337,49 @@ function Server.addPlayerRemovingCallback(self: any, fn: (player: Player, data: 
 end
 
 function Server.resetData(self: any, player: Player)
+	local key = keyForUserId(self, player.UserId)
 	local profile = self._profiles[player]
 	if profile then
-		(profile :: any)._dontSave = true
+		-- End the session first (flushes + releases the lock), then wipe the
+		-- key once the session has fully ended so the final save can't race
+		-- the removal and re-create the data.
+		profile.OnSessionEnd:connect(function()
+			Profile.removeKey(self.store, key)
+		end)
 		profile:EndSession()
+	else
+		Profile.removeKey(self.store, key)
 	end
-	Profile.removeKey(self.store, keyForUserId(self, player.UserId))
 	player:Kick("Your data has been reset - please rejoin.")
 end
 
--- ── No-op stubs for upstream parity ────────────────────────────────────────
--- The original DataService also surfaces `addGlobalCallback` /
--- `sendGlobalMessage` (ProfileStore message handlers). They have no
--- equivalent in raw DataStores, so we expose stubs that throw clearly
--- if called, rather than silently dropping messages.
+-- ── Cross-server messaging (backed by ProfileStore's message queue) ─────────
 
-function Server.addGlobalCallback(_self: any, _key: string, _cb: (player: Player, data: { any }) -> boolean?)
-	error("DataService.Server.addGlobalCallback is not supported by the framework's built-in DataService", 2)
+--[=[
+	Registers a handler for global messages sent to a player's profile under
+	`key`. The handler should return `true` once it has processed the message
+	so ProfileStore drops it from the queue. Handlers fire for messages that
+	arrive while the player is in this server as well as queued messages that
+	were posted while they were offline (delivered on next session).
+]=]
+function Server.addGlobalCallback(self: any, key: string, callback: GlobalCallback)
+	assert(type(key) == "string", "DataService.Server.addGlobalCallback: key must be a string")
+	assert(type(callback) == "function", "DataService.Server.addGlobalCallback: callback must be a function")
+	local list = self._messageHandlers[key]
+	if not list then
+		list = {}
+		self._messageHandlers[key] = list
+	end
+	table.insert(list, callback)
 end
 
-function Server.sendGlobalMessage(_self: any, _key: string, _userId: number | string, _data: { any }): boolean
-	error("DataService.Server.sendGlobalMessage is not supported by the framework's built-in DataService", 2)
+--[=[
+	Posts a global message to the profile owned by `userId`, regardless of
+	which server (if any) currently has it loaded. Returns whether the message
+	was queued successfully.
+]=]
+function Server.sendGlobalMessage(self: any, key: string, userId: number | string, data: { any }): boolean
+	return Profile.sendMessage(self.store, keyForUserId(self, userId), { key = key, data = data })
 end
 
 return Server
