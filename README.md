@@ -23,12 +23,74 @@ Fully `--!strict`. Passes `luau-lsp analyze` with zero warnings.
 
 ## Install
 
-### Wally (recommended)
+### Cursor terminal (any new project)
+
+**One-time setup** (from this repo):
+
+```powershell
+.\scripts\setup-cursor.ps1
+```
+
+Restart the Cursor terminal once. Then open **any** Roblox project in Cursor, open the integrated terminal at the project root, and run:
+
+```text
+framework-install
+```
+
+That installs into the **current working directory** (your opened workspace). Default mode is `local` (links this repo; no Wally publish needed). Use `framework-install -Mode wally` for the registry package.
+
+You can also run **Tasks: Run Task** → **Install Framework (current project)** (`Ctrl+Shift+P`).
+
+### One-command install (recommended)
+
+From this repo, point at any Rojo project (path can be `.` for the current folder):
+
+```powershell
+# Windows — from Framework-v2 root
+.\install.ps1 C:\path\to\your-game
+
+# Or
+.\install.cmd C:\path\to\your-game
+```
+
+```bash
+# macOS / Linux
+chmod +x scripts/install-framework.sh
+./scripts/install-framework.sh /path/to/your-game
+```
+
+| Mode | Flag | What it does |
+|------|------|----------------|
+| **wally** (default) | `-Mode wally` | Adds `leonardhoarau/framework` to `wally.toml`, mounts `Packages` in Rojo, runs `wally install`. |
+| **local** | `-Mode local` | Links this repo: Rojo path to `src/Framework`, or Wally `{ path = "..." }` if no project file. |
+| **rbxm** | `-Mode rbxm` | Builds `framework.rbxm` into `your-game/vendor/`. |
+
+Requires [Rojo](https://github.com/rojo-rbx/rojo) and, for Wally modes, [Wally](https://github.com/UpliftGames/wally) on your PATH (`aftman install` in this repo installs both). Python 3 is optional but gives more reliable Rojo project patching.
+
+After **wally** / **local** (Wally path):
+
+```lua
+local Framework = require(game:GetService("ReplicatedStorage").Packages.Framework)
+```
+
+After **local** (Rojo-only mount):
+
+```lua
+local Framework = require(game:GetService("ReplicatedStorage").Framework)
+```
+
+**Tip:** Add the Framework repo to your PATH or shell profile so you can run install from anywhere:
+
+```powershell
+function Install-Framework { & "C:\path\to\Framework-v2\install.ps1" @args }
+```
+
+### Wally (manual)
 
 ```toml
 # wally.toml
 [dependencies]
-Framework = "leonardhoarau/framework@^0.2.0"
+Framework = "leonardhoarau/framework@^0.3.0"
 ```
 
 The framework is self-contained — it has no external dependencies.
@@ -39,7 +101,7 @@ Then in code:
 local Framework = require(game:GetService("ReplicatedStorage").Packages.Framework)
 ```
 
-### Rojo
+### Rojo (manual)
 
 The repo's `default.project.json` mounts the framework at `ReplicatedStorage.Framework` for development. Drop `src/Framework/` anywhere under `ReplicatedStorage` in your own project and require it.
 
@@ -53,7 +115,7 @@ local Framework = require(game:GetService("ReplicatedStorage").Framework)
 rojo build package.project.json -o framework.rbxm
 ```
 
-Produces a single `.rbxm` containing only the framework, ready to drag into Studio.
+Produces a single `.rbxm` containing only the framework, ready to drag into Studio (or use `.\install.ps1 -Mode rbxm <project>`).
 
 ---
 
