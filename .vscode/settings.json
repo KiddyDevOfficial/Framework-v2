@@ -1,5 +1,13 @@
 {
   "files.autoSave": "afterDelay",
   "files.autoSaveDelay": 500,
-  "files.encoding": "utf8"
+  "files.encoding": "utf8",
+  "luau-lsp.sourcemap.enabled": true,
+  "luau-lsp.sourcemap.rojoProjectFile": "default.project.json",
+  "luau-lsp.types.definitionFiles": [],
+  "luau-lsp.plugin.enabled": true,
+  "[luau]": {
+    "editor.defaultFormatter": "JohnnyMorganz.stylua",
+    "editor.formatOnSave": true
+  }
 }

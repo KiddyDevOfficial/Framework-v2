@@ -27,14 +27,18 @@
 local Server = require(script.Server)
 local Client = require(script.Client)
 local Data = require(script.Data)
+local Paths = require(script.Paths)
 
 export type Server = typeof(Server)
 export type Client = typeof(Client)
 export type Data = Data.Data
 export type Path = Data.Path
+export type AnyPath = Paths.Path
+export type AnyArrayPath = Paths.ArrayPath
 
 return {
 	server = Server,
 	client = Client,
 	Data = Data,
+	Paths = Paths,
 }

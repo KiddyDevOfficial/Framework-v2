@@ -12,24 +12,11 @@
 	    (init yields until the server pushes the initial snapshot).
 
 	Both definitions forward the underlying API as PascalCase methods so
-	they read consistently with the rest of the framework:
+	they read consistently with the rest of the framework.
 
-	```lua
-	-- src/server/Services/DataService.luau
-	local Framework = require(ReplicatedStorage.Framework)
-	local Template = require(ReplicatedStorage.Shared.DataTemplate)
-
-	return Framework.CreateDataService({
-	    Template = Template,
-	    ProfileStoreIndex = "Production",
-	})
-	```
-
-	```lua
-	-- src/client/Controllers/DataController.luau
-	local Framework = require(ReplicatedStorage.Framework)
-	return Framework.CreateDataController()
-	```
+	`CreateDataService<T>` / `CreateDataController<T>` take a template type
+	`T` (usually `DataTemplate.DataTemplate`) so `:Get` / `:Update` path
+	arguments autocomplete from your schema.
 ]=]
 
 local RunService = game:GetService("RunService")
@@ -37,13 +24,17 @@ local RunService = game:GetService("RunService")
 local Service = require(script.Parent.Parent.Modular.Service)
 local Controller = require(script.Parent.Parent.Modular.Controller)
 local DataPackage = require(script.Parent.Parent.Data)
+local Paths = require(script.Parent.Parent.Data.Paths)
 
 local Data = {}
 
-export type ServerOptions = {
+export type AnyPath = Paths.Path
+export type AnyArrayPath = Paths.ArrayPath
+
+export type ServerOptions<T = { [string]: any }> = {
 	Name: string?,
 	Dependencies: { string }?,
-	Template: { [string]: any },
+	Template: T,
 	ProfileStoreIndex: string?,
 	ProfileStoreDataPrefix: string?,
 	UseMock: boolean?,
@@ -51,73 +42,93 @@ export type ServerOptions = {
 	OverriddenUserId: number?,
 	DontSave: boolean?,
 	ResetData: boolean?,
-	OnPlayerInit: ((self: any, player: Player, data: any) -> ())?,
+	OnPlayerInit: ((self: any, player: Player, data: T) -> ())?,
 }
 
-export type ClientOptions = {
+export type ClientOptions<T = { [string]: any }> = {
 	Name: string?,
 	Dependencies: { string }?,
+	-- Pass the same table as the server `Template` so `T` is inferred.
+	Template: T?,
 }
 
 --[=[
-	Public API exposed by `Framework.CreateDataService(...)`. Cast the
-	return of `Framework.GetService("DataService")` to this type to get
-	autocomplete on every server-side DataService method.
+	Public API for `Framework.CreateDataService<T>(...)`. Require your game
+	`DataService` module (which sets `T` from `DataTemplate`) for full path
+	autocomplete — not `Framework.GetService("DataService")`.
 ]=]
-export type ServerClass = {
-	Server: (self: ServerClass) -> any,
-	WaitForData: (self: ServerClass, player: Player) -> any,
-	HasProfile: (self: ServerClass, player: Player) -> boolean,
-	GetProfile: (self: ServerClass, player: Player) -> any,
-	Get: (self: ServerClass, player: Player, path: any) -> any,
-	Set: (self: ServerClass, player: Player, path: any, value: any, dontReplicate: boolean?) -> (),
-	Update: (self: ServerClass, player: Player, path: any, callback: (any) -> any, dontReplicate: boolean?) -> any,
-	ArrayInsert: (
-		self: ServerClass,
+export type ServerClass<T = { [string]: any }, TPath = AnyPath, TArrayPath = AnyArrayPath> = {
+	Server: (self: ServerClass<T, TPath, TArrayPath>) -> any,
+	WaitForData: (self: ServerClass<T, TPath, TArrayPath>, player: Player) -> any,
+	HasProfile: (self: ServerClass<T, TPath, TArrayPath>, player: Player) -> boolean,
+	GetProfile: (self: ServerClass<T, TPath, TArrayPath>, player: Player) -> any,
+	Get: (self: ServerClass<T, TPath, TArrayPath>, player: Player, path: TPath?) -> any,
+	Set: (
+		self: ServerClass<T, TPath, TArrayPath>,
 		player: Player,
-		path: any,
+		path: TPath,
+		value: any,
+		dontReplicate: boolean?
+	) -> (),
+	Update: (
+		self: ServerClass<T, TPath, TArrayPath>,
+		player: Player,
+		path: TPath,
+		callback: (prev: any) -> any,
+		dontReplicate: boolean?
+	) -> any,
+	ArrayInsert: (
+		self: ServerClass<T, TPath, TArrayPath>,
+		player: Player,
+		path: TArrayPath,
 		value: any,
 		index: number?,
 		dontReplicate: boolean?
 	) -> (),
-	ArrayRemove: (self: ServerClass, player: Player, path: any, index: number, dontReplicate: boolean?) -> any,
-	GetChangedSignal: (self: ServerClass, player: Player, path: any) -> any,
-	GetIndexChangedSignal: (self: ServerClass, player: Player, path: any) -> any,
-	GetArrayInsertedSignal: (self: ServerClass, player: Player, path: any) -> any,
-	GetArrayRemovedSignal: (self: ServerClass, player: Player, path: any) -> any,
-	AddGlobalCallback: (self: ServerClass, key: string, callback: (player: Player, data: { any }) -> boolean?) -> (),
-	SendGlobalMessage: (self: ServerClass, key: string, userId: number | string, data: { any }) -> boolean,
-	AddPlayerRemovingCallback: (self: ServerClass, fn: (player: Player, data: any) -> ()) -> () -> (),
-	ResetData: (self: ServerClass, player: Player) -> (),
+	ArrayRemove: (
+		self: ServerClass<T, TPath, TArrayPath>,
+		player: Player,
+		path: TArrayPath,
+		index: number,
+		dontReplicate: boolean?
+	) -> any,
+	GetChangedSignal: (self: ServerClass<T, TPath, TArrayPath>, player: Player, path: TPath) -> any,
+	GetIndexChangedSignal: (self: ServerClass<T, TPath, TArrayPath>, player: Player, path: TPath) -> any,
+	GetArrayInsertedSignal: (self: ServerClass<T, TPath, TArrayPath>, player: Player, path: TArrayPath) -> any,
+	GetArrayRemovedSignal: (self: ServerClass<T, TPath, TArrayPath>, player: Player, path: TArrayPath) -> any,
+	AddGlobalCallback: (self: ServerClass<T, TPath, TArrayPath>, key: string, callback: (player: Player, data: { any }) -> boolean?) -> (),
+	SendGlobalMessage: (self: ServerClass<T, TPath, TArrayPath>, key: string, userId: number | string, data: { any }) -> boolean,
+	AddPlayerRemovingCallback: (self: ServerClass<T, TPath, TArrayPath>, fn: (player: Player, data: T) -> ()) -> () -> (),
+	ResetData: (self: ServerClass<T, TPath, TArrayPath>, player: Player) -> (),
 }
 
---[=[
-	Public API exposed by `Framework.CreateDataController(...)`. Cast the
-	return of `Framework.GetController("DataController")` to this type to
-	get autocomplete on every client-side DataController method.
-]=]
-export type ClientClass = {
-	Client: (self: ClientClass) -> any,
-	WaitForData: (self: ClientClass) -> any,
-	Get: (self: ClientClass, path: any?) -> any,
-	Set: (self: ClientClass, path: any, value: any) -> (),
-	Update: (self: ClientClass, path: any, callback: (any) -> any) -> any,
-	ArrayInsert: (self: ClientClass, path: any, value: any, index: number?) -> (),
-	ArrayRemove: (self: ClientClass, path: any, index: number) -> any,
-	Fetch: (self: ClientClass, path: any?, dontSet: boolean?) -> any,
-	GetChangedSignal: (self: ClientClass, path: any) -> any,
-	GetIndexChangedSignal: (self: ClientClass, path: any) -> any,
-	GetArrayInsertedSignal: (self: ClientClass, path: any) -> any,
-	GetArrayRemovedSignal: (self: ClientClass, path: any) -> any,
+export type ClientClass<T = { [string]: any }, TPath = AnyPath, TArrayPath = AnyArrayPath> = {
+	Client: (self: ClientClass<T, TPath, TArrayPath>) -> any,
+	WaitForData: (self: ClientClass<T, TPath, TArrayPath>) -> any,
+	Get: (self: ClientClass<T, TPath, TArrayPath>, path: TPath?) -> any,
+	Set: (self: ClientClass<T, TPath, TArrayPath>, path: TPath, value: any) -> (),
+	Update: (
+		self: ClientClass<T, TPath, TArrayPath>,
+		path: TPath,
+		callback: (prev: any) -> any
+	) -> any,
+	ArrayInsert: (
+		self: ClientClass<T, TPath, TArrayPath>,
+		path: TArrayPath,
+		value: any,
+		index: number?
+	) -> (),
+	ArrayRemove: (self: ClientClass<T, TPath, TArrayPath>, path: TArrayPath, index: number) -> any,
+	Fetch: (self: ClientClass<T, TPath, TArrayPath>, path: TPath?, dontSet: boolean?) -> any,
+	GetChangedSignal: (self: ClientClass<T, TPath, TArrayPath>, path: TPath) -> any,
+	GetIndexChangedSignal: (self: ClientClass<T, TPath, TArrayPath>, path: TPath) -> any,
+	GetArrayInsertedSignal: (self: ClientClass<T, TPath, TArrayPath>, path: TArrayPath) -> any,
+	GetArrayRemovedSignal: (self: ClientClass<T, TPath, TArrayPath>, path: TArrayPath) -> any,
 }
 
---[=[
-	Wraps the `DataService.server` singleton in a framework `Service`.
-	Other services can depend on it via `Dependencies = { "DataService" }`
-	(or whatever `Name` you choose) to be guaranteed of a live profile store
-	before their own `Init` runs.
-]=]
-function Data.CreateService(options: ServerOptions): ServerClass
+type ServerBackend = typeof(DataPackage.server)
+
+function Data.CreateService<T, TPath, TArrayPath>(options: ServerOptions<T>): ServerClass<T, TPath, TArrayPath>
 	assert(type(options) == "table", "Framework.CreateDataService: options table is required")
 	assert(
 		type(options.Template) == "table",
@@ -126,10 +137,10 @@ function Data.CreateService(options: ServerOptions): ServerClass
 
 	local name = options.Name or "DataService"
 
-	local def: any = Service.Create({
+	local def = Service.Create({
 		Name = name,
 		Dependencies = options.Dependencies or {},
-	})
+	}) :: ServerClass<T, TPath, TArrayPath> & { _server: ServerBackend? }
 
 	function def:Init()
 		if not RunService:IsServer() then
@@ -157,96 +168,101 @@ function Data.CreateService(options: ServerOptions): ServerClass
 		})
 	end
 
-	function def:Server(): any
-		return self._server
+	function def:Server(): ServerBackend
+		return self._server :: ServerBackend
 	end
 
 	function def:WaitForData(player: Player): any
-		return self._server:waitForData(player)
+		return (self._server :: ServerBackend):waitForData(player)
 	end
 
 	function def:HasProfile(player: Player): boolean
-		return self._server:hasProfile(player)
+		return (self._server :: ServerBackend):hasProfile(player)
 	end
 
 	function def:GetProfile(player: Player): any
-		return self._server:getProfile(player)
+		return (self._server :: ServerBackend):getProfile(player)
 	end
 
-	function def:Get(player: Player, path: any): any
-		return self._server:get(player, path)
+	function def:Get(player: Player, path: TPath?): any
+		return (self._server :: ServerBackend):get(player, path :: any)
 	end
 
-	function def:Set(player: Player, path: any, value: any, dontReplicate: boolean?)
-		return self._server:set(player, path, value, dontReplicate)
+	function def:Set(player: Player, path: TPath, value: any, dontReplicate: boolean?)
+		return (self._server :: ServerBackend):set(player, path :: any, value, dontReplicate)
 	end
 
-	function def:Update(player: Player, path: any, callback: (any) -> any, dontReplicate: boolean?): any
-		return self._server:update(player, path, callback, dontReplicate)
+	function def:Update(
+		player: Player,
+		path: TPath,
+		callback: (prev: any) -> any,
+		dontReplicate: boolean?
+	): any
+		return (self._server :: ServerBackend):update(player, path :: any, callback :: any, dontReplicate)
 	end
 
-	function def:ArrayInsert(player: Player, path: any, value: any, index: number?, dontReplicate: boolean?)
-		return self._server:arrayInsert(player, path, value, index, dontReplicate)
+	function def:ArrayInsert(
+		player: Player,
+		path: TArrayPath,
+		value: any,
+		index: number?,
+		dontReplicate: boolean?
+	)
+		return (self._server :: ServerBackend):arrayInsert(player, path :: any, value, index, dontReplicate)
 	end
 
-	function def:ArrayRemove(player: Player, path: any, index: number, dontReplicate: boolean?): any
-		return self._server:arrayRemove(player, path, index, dontReplicate)
+	function def:ArrayRemove(
+		player: Player,
+		path: TArrayPath,
+		index: number,
+		dontReplicate: boolean?
+	): any
+		return (self._server :: ServerBackend):arrayRemove(player, path :: any, index, dontReplicate)
 	end
 
-	function def:GetChangedSignal(player: Player, path: any): any
-		return self._server:getChangedSignal(player, path)
+	function def:GetChangedSignal(player: Player, path: TPath)
+		return (self._server :: ServerBackend):getChangedSignal(player, path :: any)
 	end
 
-	function def:GetIndexChangedSignal(player: Player, path: any): any
-		return self._server:getIndexChangedSignal(player, path)
+	function def:GetIndexChangedSignal(player: Player, path: TPath)
+		return (self._server :: ServerBackend):getIndexChangedSignal(player, path :: any)
 	end
 
-	function def:GetArrayInsertedSignal(player: Player, path: any): any
-		return self._server:getArrayInsertedSignal(player, path)
+	function def:GetArrayInsertedSignal(player: Player, path: TArrayPath)
+		return (self._server :: ServerBackend):getArrayInsertedSignal(player, path :: any)
 	end
 
-	function def:GetArrayRemovedSignal(player: Player, path: any): any
-		return self._server:getArrayRemovedSignal(player, path)
+	function def:GetArrayRemovedSignal(player: Player, path: TArrayPath)
+		return (self._server :: ServerBackend):getArrayRemovedSignal(player, path :: any)
 	end
 
 	function def:AddGlobalCallback(key: string, callback: (player: Player, data: { any }) -> boolean?)
-		return self._server:addGlobalCallback(key, callback)
+		return (self._server :: ServerBackend):addGlobalCallback(key, callback)
 	end
 
 	function def:SendGlobalMessage(key: string, userId: number | string, data: { any }): boolean
-		return self._server:sendGlobalMessage(key, userId, data)
+		return (self._server :: ServerBackend):sendGlobalMessage(key, userId, data)
 	end
 
-	function def:AddPlayerRemovingCallback(fn: (player: Player, data: any) -> ()): () -> ()
-		return self._server:addPlayerRemovingCallback(fn)
+	function def:AddPlayerRemovingCallback(fn: (player: Player, data: T) -> ()): () -> ()
+		return (self._server :: ServerBackend):addPlayerRemovingCallback(fn)
 	end
 
 	function def:ResetData(player: Player)
-		return self._server:resetData(player)
+		return (self._server :: ServerBackend):resetData(player)
 	end
 
-	return def :: ServerClass
+	return def :: ServerClass<T, TPath, TArrayPath>
 end
 
---[=[
-	Wraps the `DataService.client` singleton in a framework `Controller`.
-	`Init` assigns `_client` and calls `bind()` so replication listeners
-	are live before any `Start` hook runs. `Start` calls `init()`, which
-	yields until the snapshot arrives (via `Init` event or `Fetch` pull).
-
-	Controllers that read data should:
-	  1. List `Dependencies = { "DataController" }`.
-	  2. Call `:WaitForData()` early in their own `Start` to be sure
-	     the snapshot has arrived before they touch values.
-]=]
-function Data.CreateController(options: ClientOptions?): ClientClass
-	local opts: ClientOptions = options or {}
+function Data.CreateController<T, TPath, TArrayPath>(options: ClientOptions<T>?): ClientClass<T, TPath, TArrayPath>
+	local opts: ClientOptions<T> = options or {}
 	local name = opts.Name or "DataController"
 
-	local def: any = Controller.Create({
+	local def = Controller.Create({
 		Name = name,
 		Dependencies = opts.Dependencies or {},
-	})
+	}) :: ClientClass<T, TPath, TArrayPath> & { _client: any }
 
 	function def:Init()
 		if not RunService:IsClient() then
@@ -254,7 +270,6 @@ function Data.CreateController(options: ClientOptions?): ClientClass
 		end
 		local client = DataPackage.client
 		self._client = client
-		-- Subscribe before `Start` so a server `Init` fired during boot is not lost.
 		client:bind()
 	end
 
@@ -262,7 +277,7 @@ function Data.CreateController(options: ClientOptions?): ClientClass
 		if not RunService:IsClient() then
 			return
 		end
-		self._client:init()
+		(self._client :: any):init()
 	end
 
 	function def:Client(): any
@@ -270,50 +285,50 @@ function Data.CreateController(options: ClientOptions?): ClientClass
 	end
 
 	function def:WaitForData(): any
-		return self._client:waitForData()
+		return (self._client :: any):waitForData()
 	end
 
-	function def:Get(path: any?): any
-		return self._client:get(path)
+	function def:Get(path: TPath?): any
+		return (self._client :: any):get(path :: any)
 	end
 
-	function def:Set(path: any, value: any)
-		return self._client:set(path, value)
+	function def:Set(path: TPath, value: any)
+		return (self._client :: any):set(path :: any, value)
 	end
 
-	function def:Update(path: any, callback: (any) -> any): any
-		return self._client:update(path, callback)
+	function def:Update(path: TPath, callback: (prev: any) -> any): any
+		return (self._client :: any):update(path :: any, callback :: any)
 	end
 
-	function def:ArrayInsert(path: any, value: any, index: number?)
-		return self._client:arrayInsert(path, value, index)
+	function def:ArrayInsert(path: TArrayPath, value: any, index: number?)
+		return (self._client :: any):arrayInsert(path :: any, value, index)
 	end
 
-	function def:ArrayRemove(path: any, index: number): any
-		return self._client:arrayRemove(path, index)
+	function def:ArrayRemove(path: TArrayPath, index: number): any
+		return (self._client :: any):arrayRemove(path :: any, index)
 	end
 
-	function def:Fetch(path: any?, dontSet: boolean?): any
-		return self._client:fetch(path, dontSet)
+	function def:Fetch(path: TPath?, dontSet: boolean?): any
+		return (self._client :: any):fetch(path :: any, dontSet)
 	end
 
-	function def:GetChangedSignal(path: any): any
-		return self._client:getChangedSignal(path)
+	function def:GetChangedSignal(path: TPath)
+		return (self._client :: any):getChangedSignal(path :: any)
 	end
 
-	function def:GetIndexChangedSignal(path: any): any
-		return self._client:getIndexChangedSignal(path)
+	function def:GetIndexChangedSignal(path: TPath)
+		return (self._client :: any):getIndexChangedSignal(path :: any)
 	end
 
-	function def:GetArrayInsertedSignal(path: any): any
-		return self._client:getArrayInsertedSignal(path)
+	function def:GetArrayInsertedSignal(path: TArrayPath)
+		return (self._client :: any):getArrayInsertedSignal(path :: any)
 	end
 
-	function def:GetArrayRemovedSignal(path: any): any
-		return self._client:getArrayRemovedSignal(path)
+	function def:GetArrayRemovedSignal(path: TArrayPath)
+		return (self._client :: any):getArrayRemovedSignal(path :: any)
 	end
 
-	return def :: ClientClass
+	return def :: ClientClass<T, TPath, TArrayPath>
 end
 
 return Data

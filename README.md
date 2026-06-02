@@ -370,17 +370,36 @@ The returned definition is a regular framework `Service`: `:Init` boots
 `Init` runs. Convenience pass-throughs are exposed in PascalCase:
 
 ```lua
-local Data = Framework.GetService("DataService")
-local profile  = Data:WaitForData(player)
-local currency = Data:Get(player, "currency")
-Data:Update(player, "currency", function(c) return c + 100 end)
-Data:GetChangedSignal(player, "currency"):connect(function(new) print(new) end)
+local DataService = require(ServerScriptService.Server.Services.DataService)
+-- Paths autocomplete from `Shared.DataTemplate` when you use the typed service module:
+local profile  = DataService:WaitForData(player)
+local currency = DataService:Get(player, "currency")
+DataService:Update(player, "currency", function(c) return c + 100 end)
+DataService:Update(player, { "settings", "musicVolume" }, function(v) return math.clamp(v + 0.1, 0, 1) end)
+DataService:GetChangedSignal(player, "currency"):connect(function(new) print(new) end)
 ```
 
 > Signals returned by `:GetChangedSignal`, `:GetIndexChangedSignal`,
 > `:GetArrayInsertedSignal` and `:GetArrayRemovedSignal` are framework
 > `Signal`s, so listeners use the lowercase `:connect` / `:once` /
 > `:disconnect` / `:wait` API.
+
+### Typed paths from `DataTemplate`
+
+`export type DataTemplate` in `src/shared/DataTemplate.luau` drives compile-time
+paths on `DataService` / `DataController`. Prefer `require`ing your typed service
+module (see above) so Luau infers `T` from `Template`:
+
+| Helper | Purpose |
+| --- | --- |
+| `DataTemplate.Path` | Union of valid top-level keys and array path segments from your schema |
+| `DataTemplate.ArrayPath` | Paths to array fields (for `:ArrayInsert` / `:ArrayRemove`) |
+| `Framework.AnyDataPath` | Broad fallback (`string | { string | number }`) for untyped services |
+
+On the client, pass `Template = DataTemplate` into `CreateDataController` (same
+table as the server) so paths match. Luau currently cannot derive exact
+ordered tuple paths from a table type, so `DataTemplate.Path` is the supported
+schema-owned annotation for path autocomplete.
 
 `OnPlayerInit` lets you seed runtime-only keys before the snapshot ships to the
 client:

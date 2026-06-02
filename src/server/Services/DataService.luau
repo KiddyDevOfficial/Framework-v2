@@ -5,12 +5,13 @@
 	`DataTemplate`. Other services list `Dependencies = { "DataService" }`
 	to be guaranteed a live profile store before their own `Init` runs.
 
-	Usage (typed via direct require - the module *is* the singleton):
+	Usage (typed via direct require - paths autocomplete from `DataTemplate`):
 	```lua
 	local DataService = require(ServerScriptService.Server.Services.DataService)
 
 	DataService:WaitForData(player)
 	DataService:Update(player, "currency", function(c) return c + 100 end)
+	DataService:Update(player, { "settings", "musicVolume" }, function(v) return v + 0.1 end)
 	```
 ]=]
 
@@ -20,17 +21,27 @@ local RunService = game:GetService("RunService")
 local Framework = require(ReplicatedStorage:WaitForChild("Framework"))
 local DataTemplate = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("DataTemplate"))
 
-local USE_MOCK = false and RunService:IsStudio()
-export type Class = Framework.DataServiceClass
+type PlayerData = DataTemplate.DataTemplate
+type PlayerDataPath = DataTemplate.Path
+type PlayerDataArrayPath = DataTemplate.ArrayPath
 
-return Framework.CreateDataService({
+local USE_MOCK = false and RunService:IsStudio()
+
+export type Class = Framework.DataServiceClass<PlayerData, PlayerDataPath, PlayerDataArrayPath>
+export type Path = PlayerDataPath
+
+local DataService: Class = Framework.CreateDataService<PlayerData, PlayerDataPath, PlayerDataArrayPath>({
 	Name = "DataService",
 	Template = DataTemplate,
 	ProfileStoreIndex = "PlayerData",
 	UseMock = USE_MOCK,
-	OnPlayerInit = function(_self, player, data)
-		data.stats = data.stats or { playTime = 0, joinCount = 0 }
-		data.stats.joinCount += 1
-		print(`[DataService] {player.Name} profile loaded (joinCount = {data.stats.joinCount})`)
+	OnPlayerInit = function(_self, player, data: PlayerData)
+		-- Extend template at runtime (add `stats` to DataTemplate if you want it typed).
+		local extended = data :: any
+		extended.stats = extended.stats or { playTime = 0, joinCount = 0 }
+		extended.stats.joinCount += 1
+		print(`[DataService] {player.Name} profile loaded (joinCount = {extended.stats.joinCount})`)
 	end,
 })
+
+return DataService

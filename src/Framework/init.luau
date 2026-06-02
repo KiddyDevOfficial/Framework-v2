@@ -131,10 +131,20 @@ export type ControllerDefinition = Modular.ControllerDefinition
 export type ComponentDefinition = Modular.ComponentDefinition
 export type LifecycleHooks = Modular.LifecycleHooks
 export type ComponentLifecycleHooks = Modular.ComponentLifecycleHooks
-export type DataServiceOptions = DataAdapter.ServerOptions
-export type DataControllerOptions = DataAdapter.ClientOptions
-export type DataServiceClass = DataAdapter.ServerClass
-export type DataControllerClass = DataAdapter.ClientClass
+export type AnyDataPath = DataAdapter.AnyPath
+export type AnyDataArrayPath = DataAdapter.AnyArrayPath
+export type DataServiceOptions<T = { [string]: any }> = DataAdapter.ServerOptions<T>
+export type DataControllerOptions<T = { [string]: any }> = DataAdapter.ClientOptions<T>
+export type DataServiceClass<
+	T = { [string]: any },
+	TPath = DataAdapter.AnyPath,
+	TArrayPath = DataAdapter.AnyArrayPath,
+> = DataAdapter.ServerClass<T, TPath, TArrayPath>
+export type DataControllerClass<
+	T = { [string]: any },
+	TPath = DataAdapter.AnyPath,
+	TArrayPath = DataAdapter.AnyArrayPath,
+> = DataAdapter.ClientClass<T, TPath, TArrayPath>
 export type NetworkBank = Networking.Bank
 export type NetworkEvent<Args> = Networking.Event<Args>
 export type NetworkUnreliableEvent<Args> = Networking.UnreliableEvent<Args>

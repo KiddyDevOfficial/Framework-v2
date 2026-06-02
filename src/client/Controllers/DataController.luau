@@ -5,29 +5,31 @@
 	server pushes the initial snapshot, which is why the adapter runs it
 	in `Start` (the yield-allowed lifecycle phase).
 
-	Other controllers list `Dependencies = { "DataController" }` and call
-	`Data:WaitForData()` if they need to be fully defensive.
-
-	Usage (typed via direct require):
+	Usage (typed via direct require - paths autocomplete from `DataTemplate`):
 	```lua
 	local DataController = require(StarterPlayerScripts.Client.Controllers.DataController)
 
 	DataController:WaitForData()
 	print("currency:", DataController:Get("currency"))
-	DataController:GetChangedSignal("currency"):connect(function(value)
-	    print("currency replicated:", value)
-	end)
+	DataController:Get({ "settings", "musicVolume" })
 	```
 ]=]
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Framework = require(ReplicatedStorage:WaitForChild("Framework"))
+local DataTemplate = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("DataTemplate"))
 
-export type Class = Framework.DataControllerClass
+type PlayerData = DataTemplate.DataTemplate
+type PlayerDataPath = DataTemplate.Path
+type PlayerDataArrayPath = DataTemplate.ArrayPath
 
-local DataController: any = Framework.CreateDataController({
+export type Class = Framework.DataControllerClass<PlayerData, PlayerDataPath, PlayerDataArrayPath>
+export type Path = PlayerDataPath
+
+local DataController: Class = Framework.CreateDataController<PlayerData, PlayerDataPath, PlayerDataArrayPath>({
 	Name = "DataController",
+	Template = DataTemplate,
 })
 
 local baseStart = DataController.Start
@@ -37,4 +39,4 @@ function DataController:Start()
 	print("[DataController] initial snapshot received")
 end
 
-return DataController :: Class
+return DataController
