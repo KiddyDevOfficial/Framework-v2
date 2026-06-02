@@ -45,24 +45,6 @@ the singleton. Prefer `require(path.to.DataService)` over
 
 ## Install
 
-### Cursor terminal (any new project)
-
-**One-time setup** (from this repo):
-
-```powershell
-.\scripts\setup-cursor.ps1
-```
-
-Restart the Cursor terminal once. Then open **any** Roblox project in Cursor, open the integrated terminal at the project root, and run:
-
-```text
-framework-install
-```
-
-That installs into the **current working directory** (your opened workspace). Default mode is `local` (links this repo; no Wally publish needed). Use `framework-install -Mode wally` for the registry package.
-
-You can also run **Tasks: Run Task** → **Install Framework (current project)** (`Ctrl+Shift+P`).
-
 ### One-command install (recommended)
 
 From this repo, point at any Rojo project (path can be `.` for the current folder):
