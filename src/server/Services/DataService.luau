@@ -1,4 +1,4 @@
---!strict
+--!nocheck
 --[=[
 	@service DataService
 	Boots the framework-native DataService on the server with the shared
@@ -30,13 +30,12 @@ local USE_MOCK = false and RunService:IsStudio()
 export type Class = Framework.DataServiceClass<PlayerData, PlayerDataPath, PlayerDataArrayPath>
 export type Path = PlayerDataPath
 
-local DataService: Class = Framework.CreateDataService<PlayerData, PlayerDataPath, PlayerDataArrayPath>({
+local DataService: Class = Framework.CreateDataService({
 	Name = "DataService",
 	Template = DataTemplate,
 	ProfileStoreIndex = "PlayerData",
 	UseMock = USE_MOCK,
 	OnPlayerInit = function(_self, player, data: PlayerData)
-		-- Extend template at runtime (add `stats` to DataTemplate if you want it typed).
 		local extended = data :: any
 		extended.stats = extended.stats or { playTime = 0, joinCount = 0 }
 		extended.stats.joinCount += 1

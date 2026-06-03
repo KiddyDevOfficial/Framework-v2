@@ -14,7 +14,8 @@ CollectionService-driven component runtime.
 - **DataService** — persistent, auto-replicated player data backed by a
   vendored [ProfileStore](https://github.com/MadStudioRoblox/ProfileStore),
   via `CreateDataService` / `CreateDataController`.
-- **Monetization** — `MarketplaceService` wrapper (products, passes, receipts),
+- **Monetization** — `MarketplaceService` wrapper (products, passes,
+  [subscriptions](https://create.roblox.com/docs/production/monetization/subscriptions), receipts),
   via `CreateMonetizationService` / `CreateMonetizationController`.
 - **Util** — `Trove`, `TableUtil`, `StringUtil`, `NumberUtil`, `Debounce`,
   `Timer`, `Promise`, `Observer`, `GuiButton` (CollectionService tag `Button`).
@@ -519,7 +520,9 @@ Packet kinds: `Bank:Event` (reliable `RemoteEvent`), `Bank:UnreliableEvent`
 ## Monetization
 
 Framework-native `MarketplaceService` layer: developer products
-(`ProcessReceipt` handlers), game passes, and purchase signals. No Wally deps.
+(`ProcessReceipt` handlers), game passes, experience subscriptions, and purchase
+signals. No Wally deps. Subscription APIs mirror
+[Roblox subscriptions](https://create.roblox.com/docs/production/monetization/subscriptions).
 
 ### Server — `Framework.CreateMonetizationService`
 
@@ -552,6 +555,27 @@ if Monetization:OwnsGamePass(player, 987654) then ... end
 Monetization.ProductPurchased:connect(function(player, productId) ... end)
 ```
 
+**Subscriptions (server)** — status, details, payment history, prompts, and
+`Players.UserSubscriptionStatusChanged` (via `SubscriptionStatusChanged` + per-id handlers):
+
+```lua
+local SUBSCRIPTION_ID = "your-subscription-id"
+
+Monetization:RegisterSubscription(SUBSCRIPTION_ID, function(player, id, status)
+    if status.IsSubscribed then
+        -- grant VIP
+    end
+end)
+
+local status = Monetization:GetUserSubscriptionStatus(player, SUBSCRIPTION_ID)
+-- status.IsSubscribed, status.IsRenewing
+
+Monetization:PromptSubscriptionPurchase(player, SUBSCRIPTION_ID)
+Monetization:PromptCancelSubscription(player, SUBSCRIPTION_ID)
+
+Monetization.SubscriptionStatusChanged:connect(function(player, id, status) ... end)
+```
+
 ### Client — `Framework.CreateMonetizationController`
 
 ```lua
@@ -562,6 +586,10 @@ return Framework.CreateMonetizationController({ Name = "MonetizationController" 
 local Monetization = Framework.GetController("MonetizationController")
 Monetization:PromptGamePassPurchase(987654)
 Monetization.GamePassPurchaseFinished:connect(function(id, purchased) ... end)
+
+Monetization:PromptSubscriptionPurchase(SUBSCRIPTION_ID)
+Monetization:GetSubscriptionProductInfo(SUBSCRIPTION_ID) -- localized price (client-only)
+Monetization.SubscriptionPurchaseFinished:connect(function(id, didTryPurchasing) ... end)
 ```
 
 ### Direct access
@@ -572,6 +600,8 @@ Monetization.server:init()
 Monetization.server:registerProduct(123456, handler)
 Monetization.client:init()
 Monetization.client:promptGamePassPurchase(987654)
+Monetization.server:getUserSubscriptionStatus(player, SUBSCRIPTION_ID)
+Monetization.client:getSubscriptionProductInfo(SUBSCRIPTION_ID)
 ```
 
 ---

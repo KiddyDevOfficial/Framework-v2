@@ -24,14 +24,19 @@ type ServerClass = Types.ServerClass
 type ReceiptInfo = Types.ReceiptInfo
 type ProductHandler = Types.ProductHandler
 type PurchaseRecorder = Types.PurchaseRecorder
+type SubscriptionStatus = Types.SubscriptionStatus
+type SubscriptionStatusHandler = Types.SubscriptionStatusHandler
 
 local Server = {
 	-- Fires after a developer product is successfully granted: (player, productId).
 	ProductPurchased = Signal.new(),
 	-- Fires after a game pass purchase completes successfully: (player, gamePassId).
 	GamePassPurchased = Signal.new(),
+	-- Fires when a tracked subscription's status changes: (player, subscriptionId, status).
+	SubscriptionStatusChanged = Signal.new(),
 
 	_productHandlers = {} :: { [number]: ProductHandler },
+	_subscriptionHandlers = {} :: { [string]: SubscriptionStatusHandler },
 	_gamePassCache = {} :: { [Player]: { [number]: boolean } },
 	_recorder = nil :: PurchaseRecorder?,
 	_processedThisSession = {} :: { [string]: boolean },
@@ -79,6 +84,91 @@ function Server.init(self: ServerClass)
 			self._gamePassCache[player] = nil
 		end)
 	)
+
+	table.insert(
+		self._connections,
+		Players.UserSubscriptionStatusChanged:Connect(function(player: Player, subscriptionId: string)
+			self:_onUserSubscriptionStatusChanged(player, subscriptionId)
+		end)
+	)
+end
+
+function Server.registerSubscription(
+	self: ServerClass,
+	subscriptionId: string,
+	handler: SubscriptionStatusHandler
+)
+	assert(type(subscriptionId) == "string", "[Monetization.Server] subscriptionId must be a string")
+	assert(#subscriptionId > 0, "[Monetization.Server] subscriptionId must be non-empty")
+	assert(type(handler) == "function", "[Monetization.Server] handler must be a function")
+	self._subscriptionHandlers[subscriptionId] = handler
+end
+
+function Server.unregisterSubscription(self: ServerClass, subscriptionId: string)
+	self._subscriptionHandlers[subscriptionId] = nil
+end
+
+function Server._onUserSubscriptionStatusChanged(self: any, player: Player, subscriptionId: string)
+	local status = self:getUserSubscriptionStatus(player, subscriptionId)
+	if not status then
+		return
+	end
+
+	self.SubscriptionStatusChanged:fire(player, subscriptionId, status)
+
+	local handler = self._subscriptionHandlers[subscriptionId]
+	if not handler then
+		return
+	end
+
+	local ok, err = pcall(handler, player, subscriptionId, status)
+	if not ok then
+		warnOnce(`subscription handler for '{subscriptionId}' errored: {err}`)
+	end
+end
+
+function Server.getUserSubscriptionStatus(
+	self: ServerClass,
+	player: Player,
+	subscriptionId: string
+): SubscriptionStatus?
+	local ok, result = pcall(function()
+		return MarketplaceService:GetUserSubscriptionStatusAsync(player, subscriptionId)
+	end)
+	if not ok then
+		warnOnce(`GetUserSubscriptionStatusAsync failed for '{subscriptionId}': {result}`)
+		return nil
+	end
+	return {
+		IsSubscribed = result.IsSubscribed == true,
+		IsRenewing = result.IsRenewing == true,
+	}
+end
+
+function Server.getUserSubscriptionDetails(self: ServerClass, player: Player, subscriptionId: string): any?
+	local ok, result = pcall(function()
+		return MarketplaceService:GetUserSubscriptionDetailsAsync(player, subscriptionId)
+	end)
+	if not ok then
+		warnOnce(`GetUserSubscriptionDetailsAsync failed for '{subscriptionId}': {result}`)
+		return nil
+	end
+	return result
+end
+
+function Server.getUserSubscriptionPaymentHistory(
+	self: ServerClass,
+	player: Player,
+	subscriptionId: string
+): { any }?
+	local ok, result = pcall(function()
+		return MarketplaceService:GetUserSubscriptionPaymentHistoryAsync(player, subscriptionId)
+	end)
+	if not ok then
+		warnOnce(`GetUserSubscriptionPaymentHistoryAsync failed for '{subscriptionId}': {result}`)
+		return nil
+	end
+	return result
 end
 
 --[=[
@@ -185,6 +275,14 @@ end
 
 function Server.promptGamePassPurchase(self: ServerClass, player: Player, gamePassId: number)
 	MarketplaceService:PromptGamePassPurchase(player, gamePassId)
+end
+
+function Server.promptSubscriptionPurchase(self: ServerClass, player: Player, subscriptionId: string)
+	MarketplaceService:PromptSubscriptionPurchase(player, subscriptionId)
+end
+
+function Server.promptCancelSubscription(self: ServerClass, player: Player, subscriptionId: string)
+	MarketplaceService:PromptCancelSubscription(player, subscriptionId)
 end
 
 return Server :: ServerClass

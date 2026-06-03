@@ -25,6 +25,7 @@ local MonetizationService: Class = Framework.CreateMonetizationService({
 	Name = "MonetizationService",
 })
 
+
 local baseInit = MonetizationService.Init
 
 function MonetizationService:Init()

@@ -1,4 +1,4 @@
-﻿--!nocheck
+--!nocheck
 --[=[
 	@module Loader
 	Discovers modular units (services, controllers, components), orders them

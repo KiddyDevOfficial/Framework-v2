@@ -8,6 +8,9 @@
 	  * `Monetization.CreateController(options)` - client `Controller` that
 	    boots `Monetization.client` in `Start`.
 
+	Subscriptions follow the Roblox API:
+	https://create.roblox.com/docs/production/monetization/subscriptions
+
 	```lua
 	return Framework.CreateMonetizationService({ Name = "MonetizationService" })
 	```
@@ -42,21 +45,40 @@ export type ServiceClass = {
 	RegisterProduct: (self: ServiceClass, productId: number, handler: MonetizationTypes.ProductHandler) -> (),
 	UnregisterProduct: (self: ServiceClass, productId: number) -> (),
 	SetPurchaseRecorder: (self: ServiceClass, recorder: MonetizationTypes.PurchaseRecorder?) -> (),
+	RegisterSubscription: (
+		self: ServiceClass,
+		subscriptionId: string,
+		handler: MonetizationTypes.SubscriptionStatusHandler
+	) -> (),
+	UnregisterSubscription: (self: ServiceClass, subscriptionId: string) -> (),
 	OwnsGamePass: (self: ServiceClass, player: Player, gamePassId: number) -> boolean,
+	GetUserSubscriptionStatus: (
+		self: ServiceClass,
+		player: Player,
+		subscriptionId: string
+	) -> MonetizationTypes.SubscriptionStatus?,
+	GetUserSubscriptionDetails: (self: ServiceClass, player: Player, subscriptionId: string) -> any?,
+	GetUserSubscriptionPaymentHistory: (self: ServiceClass, player: Player, subscriptionId: string) -> { any }?,
 	PromptProductPurchase: (self: ServiceClass, player: Player, productId: number) -> (),
 	PromptGamePassPurchase: (self: ServiceClass, player: Player, gamePassId: number) -> (),
+	PromptSubscriptionPurchase: (self: ServiceClass, player: Player, subscriptionId: string) -> (),
+	PromptCancelSubscription: (self: ServiceClass, player: Player, subscriptionId: string) -> (),
 	ProductPurchased: Signal.Signal<Player, number>,
 	GamePassPurchased: Signal.Signal<Player, number>,
+	SubscriptionStatusChanged: Signal.Signal<Player, string, MonetizationTypes.SubscriptionStatus>,
 }
 
 export type ControllerClass = {
 	Client: (self: ControllerClass) -> MonetizationTypes.ClientClass,
 	PromptProductPurchase: (self: ControllerClass, productId: number) -> (),
 	PromptGamePassPurchase: (self: ControllerClass, gamePassId: number) -> (),
+	PromptSubscriptionPurchase: (self: ControllerClass, subscriptionId: string) -> (),
 	OwnsGamePass: (self: ControllerClass, gamePassId: number) -> boolean,
 	GetProductInfo: (self: ControllerClass, assetId: number, infoType: Enum.InfoType?) -> any,
+	GetSubscriptionProductInfo: (self: ControllerClass, subscriptionId: string) -> any?,
 	ProductPurchaseFinished: Signal.Signal<number, boolean>,
 	GamePassPurchaseFinished: Signal.Signal<number, boolean>,
+	SubscriptionPurchaseFinished: Signal.Signal<string, boolean>,
 }
 
 function MonetizationAdapter.CreateService(options: ServerOptions?): ServiceClass
@@ -78,6 +100,7 @@ function MonetizationAdapter.CreateService(options: ServerOptions?): ServiceClas
 		self._server = server
 		self.ProductPurchased = server.ProductPurchased
 		self.GamePassPurchased = server.GamePassPurchased
+		self.SubscriptionStatusChanged = server.SubscriptionStatusChanged
 	end
 
 	function def:Server(): MonetizationTypes.ServerClass
@@ -96,8 +119,31 @@ function MonetizationAdapter.CreateService(options: ServerOptions?): ServiceClas
 		return self._server:setPurchaseRecorder(recorder)
 	end
 
+	function def:RegisterSubscription(
+		subscriptionId: string,
+		handler: MonetizationTypes.SubscriptionStatusHandler
+	)
+		return self._server:registerSubscription(subscriptionId, handler)
+	end
+
+	function def:UnregisterSubscription(subscriptionId: string)
+		return self._server:unregisterSubscription(subscriptionId)
+	end
+
 	function def:OwnsGamePass(player: Player, gamePassId: number): boolean
 		return self._server:ownsGamePass(player, gamePassId)
+	end
+
+	function def:GetUserSubscriptionStatus(player: Player, subscriptionId: string): MonetizationTypes.SubscriptionStatus?
+		return self._server:getUserSubscriptionStatus(player, subscriptionId)
+	end
+
+	function def:GetUserSubscriptionDetails(player: Player, subscriptionId: string): any?
+		return self._server:getUserSubscriptionDetails(player, subscriptionId)
+	end
+
+	function def:GetUserSubscriptionPaymentHistory(player: Player, subscriptionId: string): { any }?
+		return self._server:getUserSubscriptionPaymentHistory(player, subscriptionId)
 	end
 
 	function def:PromptProductPurchase(player: Player, productId: number)
@@ -106,6 +152,14 @@ function MonetizationAdapter.CreateService(options: ServerOptions?): ServiceClas
 
 	function def:PromptGamePassPurchase(player: Player, gamePassId: number)
 		return self._server:promptGamePassPurchase(player, gamePassId)
+	end
+
+	function def:PromptSubscriptionPurchase(player: Player, subscriptionId: string)
+		return self._server:promptSubscriptionPurchase(player, subscriptionId)
+	end
+
+	function def:PromptCancelSubscription(player: Player, subscriptionId: string)
+		return self._server:promptCancelSubscription(player, subscriptionId)
 	end
 
 	return def :: ServiceClass
@@ -134,6 +188,7 @@ function MonetizationAdapter.CreateController(options: ClientOptions?): Controll
 		self._client:init()
 		self.ProductPurchaseFinished = self._client.ProductPurchaseFinished
 		self.GamePassPurchaseFinished = self._client.GamePassPurchaseFinished
+		self.SubscriptionPurchaseFinished = self._client.SubscriptionPurchaseFinished
 	end
 
 	function def:Client(): MonetizationTypes.ClientClass
@@ -148,12 +203,20 @@ function MonetizationAdapter.CreateController(options: ClientOptions?): Controll
 		return self._client:promptGamePassPurchase(gamePassId)
 	end
 
+	function def:PromptSubscriptionPurchase(subscriptionId: string)
+		return self._client:promptSubscriptionPurchase(subscriptionId)
+	end
+
 	function def:OwnsGamePass(gamePassId: number): boolean
 		return self._client:ownsGamePass(gamePassId)
 	end
 
 	function def:GetProductInfo(assetId: number, infoType: Enum.InfoType?): any
 		return self._client:getProductInfo(assetId, infoType)
+	end
+
+	function def:GetSubscriptionProductInfo(subscriptionId: string): any?
+		return self._client:getSubscriptionProductInfo(subscriptionId)
 	end
 
 	return def :: ControllerClass

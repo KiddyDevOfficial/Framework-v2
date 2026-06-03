@@ -27,7 +27,7 @@ type PlayerDataArrayPath = DataTemplate.ArrayPath
 export type Class = Framework.DataControllerClass<PlayerData, PlayerDataPath, PlayerDataArrayPath>
 export type Path = PlayerDataPath
 
-local DataController: Class = Framework.CreateDataController<PlayerData, PlayerDataPath, PlayerDataArrayPath>({
+local DataController: Class = Framework.CreateDataController({
 	Name = "DataController",
 	Template = DataTemplate,
 })

@@ -2,9 +2,9 @@
 --[=[
 	@module Monetization
 	Framework-native monetization layer over `MarketplaceService`. Wraps
-	developer products (consumables), game passes (one-time unlocks) and
-	subscriptions with a typed, signal-driven API. Self-contained: no
-	external Wally dependencies.
+	developer products (consumables), game passes (one-time unlocks), and
+	experience subscriptions with a typed, signal-driven API.
+	Self-contained: no external Wally dependencies.
 
 	Split into realm singletons, mirroring the `Data` subsystem:
 	  * `Monetization.server` - authoritative `ProcessReceipt`, product
@@ -51,6 +51,8 @@ export type ClientClass = Types.ClientClass
 export type ProductHandler = Types.ProductHandler
 export type ReceiptInfo = Types.ReceiptInfo
 export type PurchaseRecorder = Types.PurchaseRecorder
+export type SubscriptionStatus = Types.SubscriptionStatus
+export type SubscriptionStatusHandler = Types.SubscriptionStatusHandler
 
 return {
 	server = Server :: Types.ServerClass,

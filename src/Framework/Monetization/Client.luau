@@ -24,9 +24,12 @@ local Client = {
 	ProductPurchaseFinished = Signal.new(),
 	-- (gamePassId, wasPurchased)
 	GamePassPurchaseFinished = Signal.new(),
+	-- (subscriptionId, didTryPurchasing)
+	SubscriptionPurchaseFinished = Signal.new(),
 
 	_gamePassCache = {} :: { [number]: boolean },
 	_productInfoCache = {} :: { [string]: any },
+	_subscriptionInfoCache = {} :: { [string]: any },
 	_initialized = false,
 	_connections = {} :: { RBXScriptConnection },
 }
@@ -72,6 +75,18 @@ function Client.init(self: ClientClass)
 			end
 		)
 	)
+
+	table.insert(
+		self._connections,
+		MarketplaceService.PromptSubscriptionPurchaseFinished:Connect(
+			function(player: Player, subscriptionId: string, didTryPurchasing: boolean)
+				if player ~= localPlayer then
+					return
+				end
+				self.SubscriptionPurchaseFinished:fire(subscriptionId, didTryPurchasing)
+			end
+		)
+	)
 end
 
 function Client.promptProductPurchase(self: ClientClass, productId: number)
@@ -80,6 +95,10 @@ end
 
 function Client.promptGamePassPurchase(self: ClientClass, gamePassId: number)
 	MarketplaceService:PromptGamePassPurchase(Players.LocalPlayer, gamePassId)
+end
+
+function Client.promptSubscriptionPurchase(self: ClientClass, subscriptionId: string)
+	MarketplaceService:PromptSubscriptionPurchase(Players.LocalPlayer, subscriptionId)
 end
 
 --[=[
@@ -123,6 +142,28 @@ function Client.getProductInfo(self: ClientClass, assetId: number, infoType: Enu
 	end
 
 	self._productInfoCache[key] = info
+	return info
+end
+
+--[=[
+	Cached `GetSubscriptionProductInfoAsync` (client-only; localized pricing).
+	Status checks must run on the server via `Monetization.server:getUserSubscriptionStatus`.
+]=]
+function Client.getSubscriptionProductInfo(self: ClientClass, subscriptionId: string): any?
+	local cached = self._subscriptionInfoCache[subscriptionId]
+	if cached ~= nil then
+		return cached
+	end
+
+	local ok, info = pcall(function()
+		return MarketplaceService:GetSubscriptionProductInfoAsync(subscriptionId)
+	end)
+	if not ok then
+		warnOnce(`GetSubscriptionProductInfoAsync failed for '{subscriptionId}': {info}`)
+		return nil
+	end
+
+	self._subscriptionInfoCache[subscriptionId] = info
 	return info
 end
 

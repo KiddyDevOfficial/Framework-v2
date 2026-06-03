@@ -138,12 +138,12 @@ export type DataControllerOptions<T = { [string]: any }> = DataAdapter.ClientOpt
 export type DataServiceClass<
 	T = { [string]: any },
 	TPath = DataAdapter.AnyPath,
-	TArrayPath = DataAdapter.AnyArrayPath,
+	TArrayPath = DataAdapter.AnyArrayPath
 > = DataAdapter.ServerClass<T, TPath, TArrayPath>
 export type DataControllerClass<
 	T = { [string]: any },
 	TPath = DataAdapter.AnyPath,
-	TArrayPath = DataAdapter.AnyArrayPath,
+	TArrayPath = DataAdapter.AnyArrayPath
 > = DataAdapter.ClientClass<T, TPath, TArrayPath>
 export type NetworkBank = Networking.Bank
 export type NetworkEvent<Args> = Networking.Event<Args>
@@ -158,6 +158,8 @@ export type MonetizationControllerOptions = MonetizationAdapter.ClientOptions
 export type ProductHandler = Monetization.ProductHandler
 export type ReceiptInfo = Monetization.ReceiptInfo
 export type PurchaseRecorder = Monetization.PurchaseRecorder
+export type SubscriptionStatus = Monetization.SubscriptionStatus
+export type SubscriptionStatusHandler = Monetization.SubscriptionStatusHandler
 export type Trove = Util.Trove
 export type Timer = Util.Timer
 export type Promise<T> = Util.Promise<T>
