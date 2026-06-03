@@ -16,7 +16,10 @@ CollectionService-driven component runtime.
   via `CreateDataService` / `CreateDataController`.
 - **Monetization** — `MarketplaceService` wrapper (products, passes,
   [subscriptions](https://create.roblox.com/docs/production/monetization/subscriptions), receipts),
-  via `CreateMonetizationService` / `CreateMonetizationController`.
+  catalog lists in `Shared/Lists`, via `CreateMonetizationService` /
+  `CreateMonetizationController`.
+- **GlobalMessaging** — cross-server [MessagingService](https://create.roblox.com/docs/reference/engine/classes/MessagingService)
+  subscribe / publish (server-only), via `CreateGlobalMessagingService`.
 - **Util** — `Trove`, `TableUtil`, `StringUtil`, `NumberUtil`, `Debounce`,
   `Timer`, `Promise`, `Observer`, `GuiButton` (CollectionService tag `Button`).
 - **Enum** — immutable, comparable enumerations.
@@ -34,13 +37,18 @@ Everything below is on the root `Framework` table (also available as
 | --- | --- |
 | **Modular** | `CreateService`, `CreateController`, `CreateComponent`, `AddIn`, `AddServices`, `AddControllers`, `AddComponents`, `RegisterService`, `RegisterController`, `RegisterComponent`, `GetService`, `GetController`, `GetComponent`, `GetComponentInstance`, `GetComponentInstances`, `Start`, `Stop`, `IsStarted`, `OnStart`, `IsService`, `IsController`, `IsComponent` |
 | **Data** | `CreateDataService`, `CreateDataController`, `DataService` (`{ server, client }`) |
-| **Monetization** | `CreateMonetizationService`, `CreateMonetizationController`, `Monetization` (`{ server, client }`) |
+| **Monetization** | `CreateMonetizationService`, `CreateMonetizationController`, `Monetization` (`{ server, client }`), `RegisterProduct`, `RegisterGamePass`, `RegisterSubscription` |
+| **GlobalMessaging** | `CreateGlobalMessagingService`, `GlobalMessaging` (`{ server, Bank }`), `Bank:Event`, `Subscribe`, `Publish` |
 | **Core** | `Signal`, `Networking`, `Enum`, `Symbol`, `Types` |
 | **Util** (also top-level) | `Util`, `Trove`, `TableUtil`, `StringUtil`, `NumberUtil`, `Debounce`, `Timer`, `Promise`, `Observer`, `GuiButton` |
 
 **Typed requires (recommended):** service/controller modules already *are*
 the singleton. Prefer `require(path.to.DataService)` over
 `Framework.GetService("DataService")` so Luau infers methods without casts.
+
+> **Runtime note:** generic call syntax like `CreateDataService<T>({ ... })`
+> is type-checker only. At runtime Luau treats `<` as comparison and will
+> error. Annotate the result instead: `local svc: Class = Framework.CreateDataService({ ... })`.
 
 ---
 
@@ -335,16 +343,26 @@ Two adapter factories fold it into the modular lifecycle:
 -- src/server/Services/DataService.luau
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Framework = require(ReplicatedStorage.Framework)
-local Template = require(ReplicatedStorage.Shared.DataTemplate)
+local DataTemplate = require(ReplicatedStorage.Shared.DataTemplate)
 
-export type Class = Framework.DataServiceClass
+type PlayerData = DataTemplate.DataTemplate
+type PlayerDataPath = DataTemplate.Path
+type PlayerDataArrayPath = DataTemplate.ArrayPath
 
-return Framework.CreateDataService({
+export type Class = Framework.DataServiceClass<PlayerData, PlayerDataPath, PlayerDataArrayPath>
+export type Path = PlayerDataPath
+
+local DataService: Class = Framework.CreateDataService({
     Name = "DataService",
-    Template = Template,
+    Template = DataTemplate,
     ProfileStoreIndex = "PlayerData",
     -- UseMock = true,                  -- toggle in Studio
+    OnPlayerInit = function(_self, player, data: PlayerData)
+        -- seed runtime-only keys before the snapshot replicates
+    end,
 })
+
+return DataService
 ```
 
 The returned definition is a regular framework `Service`: `:Init` boots
@@ -385,13 +403,15 @@ ordered tuple paths from a table type, so `DataTemplate.Path` is the supported
 schema-owned annotation for path autocomplete.
 
 `OnPlayerInit` lets you seed runtime-only keys before the snapshot ships to the
-client:
+client (see the shipped `DataService` for an example):
 
 ```lua
 Framework.CreateDataService({
-    Template = Template,
-    OnPlayerInit = function(self, player, data)
-        data.sessionJoinTime = os.time()
+    Template = DataTemplate,
+    OnPlayerInit = function(_self, player, data)
+        local extended = data :: any
+        extended.stats = extended.stats or { joinCount = 0 }
+        extended.stats.joinCount += 1
     end,
 })
 ```
@@ -402,10 +422,19 @@ Framework.CreateDataService({
 -- src/client/Controllers/DataController.luau
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Framework = require(ReplicatedStorage.Framework)
+local DataTemplate = require(ReplicatedStorage.Shared.DataTemplate)
 
-export type Class = Framework.DataControllerClass
+type PlayerData = DataTemplate.DataTemplate
+type PlayerDataPath = DataTemplate.Path
+type PlayerDataArrayPath = DataTemplate.ArrayPath
 
-return Framework.CreateDataController({ Name = "DataController" })
+export type Class = Framework.DataControllerClass<PlayerData, PlayerDataPath, PlayerDataArrayPath>
+export type Path = PlayerDataPath
+
+return Framework.CreateDataController({
+    Name = "DataController",
+    Template = DataTemplate,   -- same table as the server for path typing
+})
 ```
 
 `DataService.client:init` yields until the server pushes the initial snapshot,
@@ -414,7 +443,7 @@ controllers should depend on this one and `:WaitForData()` if they need to be
 fully defensive:
 
 ```lua
-local Data = Framework.GetController("DataController")
+local Data = require(StarterPlayerScripts.Client.Controllers.DataController)
 Data:WaitForData()
 print("currency:", Data:Get("currency"))
 Data:GetChangedSignal("currency"):connect(function(value)
@@ -440,11 +469,11 @@ Because persistence is backed by ProfileStore, the `addGlobalCallback` /
 `MessageAsync` / `MessageHandler` queue):
 
 ```lua
-local Data = Framework.GetService("DataService")
+local Data = require(ServerScriptService.Server.Services.DataService)
 
 -- Register on every server that should react to the message.
 Data:AddGlobalCallback("GiftGems", function(player, payload)
-    Data:Update(player, "gems", function(g) return g + payload.amount end)
+    Data:Update(player, "currency", function(c) return c + payload.amount end)
     return true   -- return true to consume the message from the queue
 end)
 
@@ -520,40 +549,116 @@ Packet kinds: `Bank:Event` (reliable `RemoteEvent`), `Bank:UnreliableEvent`
 ## Monetization
 
 Framework-native `MarketplaceService` layer: developer products
-(`ProcessReceipt` handlers), game passes, experience subscriptions, and purchase
-signals. No Wally deps. Subscription APIs mirror
+(`ProcessReceipt` handlers), game passes (with join/purchase grant handlers),
+experience subscriptions, and purchase signals. No Wally deps. Subscription
+APIs mirror
 [Roblox subscriptions](https://create.roblox.com/docs/production/monetization/subscriptions).
+
+### Product & game pass lists
+
+Define catalog entries once under `src/shared/Lists/`. `MonetizationService`
+registers every entry on `Init`:
+
+| Module | Fields | Handler |
+| --- | --- | --- |
+| `Lists/Products.luau` | `id`, `name`, `tag?` | `(player, receipt) -> boolean` — return `true` once the grant is persisted |
+| `Lists/GamePasses.luau` | `id`, `name`, `tag?` | `(player) -> ()` — idempotent; runs on purchase **and** when a player joins if they already own the pass |
+
+Both modules expose `GetByName`, `GetByTag`, `GetById`, and `GetAll*`
+helpers. Look up entries from client UI via `require(ReplicatedStorage.Shared.Lists.Products)`
+(read-only metadata; handlers only run on the server).
+
+```lua
+-- src/shared/Lists/Products.luau
+Products.Products = {
+    {
+        id = 112213,
+        name = "Starter Pack",
+        tag = "starter_pack",
+        handler = function(player, receipt)
+            return true   -- grant + persist before returning true
+        end,
+    },
+}
+
+-- src/shared/Lists/GamePasses.luau
+GamePasses.GamePasses = {
+    {
+        id = 987654,
+        name = "VIP",
+        tag = "vip",
+        handler = function(player)
+            -- grant VIP perks (safe to run again on rejoin)
+        end,
+    },
+}
+```
 
 ### Server — `Framework.CreateMonetizationService`
 
+The shipped `MonetizationService` boots the framework layer and auto-registers
+every list entry:
+
 ```lua
 -- src/server/Services/MonetizationService.luau
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Framework = require(ReplicatedStorage.Framework)
+local Lists = ReplicatedStorage.Shared.Lists
+local Products = require(Lists.Products)
+local GamePasses = require(Lists.GamePasses)
+local Players = game:GetService("Players")
 
-local MonetizationService = Framework.CreateMonetizationService({
+export type Class = Framework.MonetizationServiceClass
+
+local MonetizationService: Class = Framework.CreateMonetizationService({
     Name = "MonetizationService",
 })
 
+local baseInit = MonetizationService.Init
+
 function MonetizationService:Init()
-    -- base Init boots Monetization.server
-    self:RegisterProduct(123456, function(player, receipt)
-        -- grant consumable; return true once persisted
-        return true
-    end)
+    baseInit(self)
+
+    for _, product in Products.GetAllProducts() do
+        self:RegisterProduct(product.id, product.handler)
+    end
+
+    for _, gamePass in GamePasses.GetAllGamePasses() do
+        self:RegisterGamePass(gamePass.id, gamePass.handler)
+    end
+
+    -- Players already in the server before Init finishes
+    for _, player in Players:GetPlayers() do
+        self:GrantRegisteredGamePassesForPlayer(player)
+    end
 end
 
 return MonetizationService
 ```
 
+Manual registration still works alongside (or instead of) the lists:
+
 ```lua
 local Monetization = require(ServerScriptService.Server.Services.MonetizationService)
 
 Monetization:RegisterProduct(123456, function(player, receipt) return true end)
+Monetization:RegisterGamePass(987654, function(player) ... end)
 Monetization:PromptProductPurchase(player, 123456)
+Monetization:PromptGamePassPurchase(player, 987654)
 if Monetization:OwnsGamePass(player, 987654) then ... end
 
 Monetization.ProductPurchased:connect(function(player, productId) ... end)
+Monetization.GamePassPurchased:connect(function(player, gamePassId) ... end)
 ```
+
+**Game pass handlers** run when:
+
+1. A registered pass is purchased in-session (`PromptGamePassPurchaseFinished`).
+2. A player joins (`PlayerAdded`) — any registered pass they already own.
+3. You call `GrantRegisteredGamePassesForPlayer(player)` explicitly.
+
+Keep handlers **idempotent** (check data flags before granting) so rejoins
+don't double-award perks.
 
 **Subscriptions (server)** — status, details, payment history, prompts, and
 `Players.UserSubscriptionStatusChanged` (via `SubscriptionStatusChanged` + per-id handlers):
@@ -583,7 +688,7 @@ return Framework.CreateMonetizationController({ Name = "MonetizationController" 
 ```
 
 ```lua
-local Monetization = Framework.GetController("MonetizationController")
+local Monetization = require(StarterPlayerScripts.Client.Controllers.MonetizationController)
 Monetization:PromptGamePassPurchase(987654)
 Monetization.GamePassPurchaseFinished:connect(function(id, purchased) ... end)
 
@@ -598,11 +703,114 @@ Monetization.SubscriptionPurchaseFinished:connect(function(id, didTryPurchasing)
 local Monetization = require(ReplicatedStorage.Framework).Monetization
 Monetization.server:init()
 Monetization.server:registerProduct(123456, handler)
+Monetization.server:registerGamePass(987654, function(player) ... end)
 Monetization.client:init()
 Monetization.client:promptGamePassPurchase(987654)
 Monetization.server:getUserSubscriptionStatus(player, SUBSCRIPTION_ID)
 Monetization.client:getSubscriptionProductInfo(SUBSCRIPTION_ID)
 ```
+
+---
+
+## GlobalMessaging
+
+Server-only wrapper around Roblox [MessagingService](https://create.roblox.com/docs/reference/engine/classes/MessagingService)
+for cross-server topics. Delivery is **best-effort** (not guaranteed); design handlers so
+missed messages are non-critical. Payloads must stay under **1 KB**. Topics are **1–80
+characters** after any prefix.
+
+By default the server prepends `G_<gameId>_` to every topic so names stay scoped to your
+experience. Override with `TopicPrefix` in `CreateGlobalMessagingService`.
+
+### Banks (recommended)
+
+Mirrors [`Networking.Bank`](src/Framework/Networking/Bank.luau): define topics once in a
+shared module, require on any server that needs them.
+
+```lua
+-- src/shared/Messaging/ExampleGlobalNet.luau
+local GlobalMessaging = require(ReplicatedStorage.Framework).GlobalMessaging
+local Bank = GlobalMessaging.Bank("Example")
+
+export type GiftPayload = { userId: number, amount: number }
+
+return {
+    Gift = Bank:Event("Gift") :: Framework.GlobalMessageTopic<GiftPayload>,
+}
+```
+
+Resolved MessagingService topic: `G_<gameId>_Example_Gift` (prefix + bank + event).
+
+```lua
+local Net = require(ReplicatedStorage.Shared.Messaging.ExampleGlobalNet)
+
+Net.Gift:Subscribe(function(message)
+    print(message.Data.userId, message.Sent)
+end)
+
+Net.Gift:Publish({ userId = 12345, amount = 100 })
+Net.Gift:Unsubscribe()
+```
+
+`Bank:Event` is idempotent (same bank + name returns the same topic handle). Banks are
+**server-only** — requiring them on the client will error if you call `:Publish` /
+`:Subscribe`.
+
+### Server — `Framework.CreateGlobalMessagingService`
+
+```lua
+-- src/server/Services/GlobalMessagingService.luau
+local Framework = require(ReplicatedStorage.Framework)
+
+export type Class = Framework.GlobalMessagingServiceClass
+
+return Framework.CreateGlobalMessagingService({
+    Name = "GlobalMessagingService",
+    -- TopicPrefix = "MyGame_",   -- optional; default G_<gameId>_
+})
+```
+
+```lua
+local GlobalMessaging = require(ServerScriptService.Server.Services.GlobalMessagingService)
+
+-- Subscribe once (re-subscribing the same topic replaces the prior listener).
+local disconnect = GlobalMessaging:Subscribe("gift", function(message)
+    -- message.Data — your payload table
+    -- message.Sent — unix time (seconds) when published
+    local payload = message.Data
+end)
+
+-- Publish to every server subscribed to this topic (yields until accepted by backend).
+GlobalMessaging:Publish("gift", { userId = 12345, amount = 100 })
+
+GlobalMessaging:Unsubscribe("gift")
+disconnect()   -- same as Unsubscribe when returned from Subscribe
+
+print(GlobalMessaging:ResolveTopic("gift"))  -- full topic string sent to MessagingService
+```
+
+Other services should list `Dependencies = { "GlobalMessagingService" }` and subscribe in
+their own `:Init` after the messaging service has booted.
+
+### Direct access
+
+```lua
+local GlobalMessaging = require(ReplicatedStorage.Framework).GlobalMessaging
+GlobalMessaging.server:init()
+GlobalMessaging.server:subscribe("MyBank_MyEvent", function(message) ... end)
+GlobalMessaging.server:publish("MyBank_MyEvent", { hello = true })
+
+local Bank = GlobalMessaging.Bank("MyBank")
+local Topic = Bank:Event("MyEvent") :: GlobalMessaging.Topic<{ hello: boolean }>
+Topic:Publish({ hello = true })
+```
+
+### vs DataService global messages
+
+`DataService` also exposes `AddGlobalCallback` / `SendGlobalMessage` for **per-player**
+queues backed by ProfileStore (ideal for offline gifts tied to a user id). Use
+**GlobalMessaging** when you need arbitrary broadcast topics between live servers
+(events, announcements, live ops) without routing through player profiles.
 
 ---
 
@@ -721,17 +929,36 @@ src/
 │   │   └── ProfileStore.luau         ← vendored MadStudio/ProfileStore
 │   ├── Networking/                   ← typed remote banks
 │   ├── Monetization/                 ← MarketplaceService wrapper
+│   ├── GlobalMessaging/              ← Bank, Topic, MessagingService wrapper
+│   │   ├── Bank.luau
+│   │   ├── Topic.luau
+│   │   └── Manager.luau
+│   ├── GlobalMessagingService.luau   ← thin re-export
 │   ├── Adapters/
 │   │   ├── Data.luau                 ← CreateDataService / CreateDataController
-│   │   └── Monetization.luau         ← CreateMonetizationService / Controller
+│   │   ├── Monetization.luau         ← CreateMonetizationService / Controller
+│   │   └── GlobalMessaging.luau      ← CreateGlobalMessagingService
 │   ├── Util/                         ← Trove, Observer, GuiButton, …
 │   └── Modular/                      ← Service, Controller, Component, Loader
-├── client/                           ← your client code
 ├── server/                           ← your server code
+│   └── Services/
+│       ├── DataService.luau              ← typed CreateDataService wrapper
+│       ├── MonetizationService.luau      ← auto-registers Lists on Init
+│       └── GlobalMessagingService.luau   ← cross-server MessagingService
+├── client/                           ← your client code
+│   └── Controllers/
+│       └── DataController.luau       ← typed CreateDataController wrapper
 └── shared/
     ├── Components/                   ← SpinModel, ExampleComponent, …
-    ├── DataTemplate.luau
-    └── Networks/                     ← optional typed remote modules
+    ├── DataTemplate.luau               ← default profile schema + Path types
+    ├── DataTypes.luau                ← re-exports PlayerData / Path aliases
+    ├── Lists/                        ← monetization catalogs
+    │   ├── Products.luau             ← developer products + receipt handlers
+    │   └── GamePasses.luau           ← game passes + grant handlers
+    ├── Messaging/                    ← GlobalMessaging banks (cross-server)
+    │   └── ExampleGlobalNet.luau     ← starter bank (copy for your topics)
+    └── Networks/                     ← Networking banks (client + server)
+        └── ExampleNet.luau
 ```
 
 - `default.project.json` — development place, mounts Framework + empty user folders.

@@ -44,6 +44,9 @@ export type ServiceClass = {
 	Server: (self: ServiceClass) -> MonetizationTypes.ServerClass,
 	RegisterProduct: (self: ServiceClass, productId: number, handler: MonetizationTypes.ProductHandler) -> (),
 	UnregisterProduct: (self: ServiceClass, productId: number) -> (),
+	RegisterGamePass: (self: ServiceClass, gamePassId: number, handler: MonetizationTypes.GamePassHandler) -> (),
+	UnregisterGamePass: (self: ServiceClass, gamePassId: number) -> (),
+	GrantRegisteredGamePassesForPlayer: (self: ServiceClass, player: Player) -> (),
 	SetPurchaseRecorder: (self: ServiceClass, recorder: MonetizationTypes.PurchaseRecorder?) -> (),
 	RegisterSubscription: (
 		self: ServiceClass,
@@ -113,6 +116,18 @@ function MonetizationAdapter.CreateService(options: ServerOptions?): ServiceClas
 
 	function def:UnregisterProduct(productId: number)
 		return self._server:unregisterProduct(productId)
+	end
+
+	function def:RegisterGamePass(gamePassId: number, handler: MonetizationTypes.GamePassHandler)
+		return self._server:registerGamePass(gamePassId, handler)
+	end
+
+	function def:UnregisterGamePass(gamePassId: number)
+		return self._server:unregisterGamePass(gamePassId)
+	end
+
+	function def:GrantRegisteredGamePassesForPlayer(player: Player)
+		return self._server:grantRegisteredGamePassesForPlayer(player)
 	end
 
 	function def:SetPurchaseRecorder(recorder: MonetizationTypes.PurchaseRecorder?)

@@ -49,6 +49,7 @@ export type Client = Types.ClientClass
 export type ServerClass = Types.ServerClass
 export type ClientClass = Types.ClientClass
 export type ProductHandler = Types.ProductHandler
+export type GamePassHandler = Types.GamePassHandler
 export type ReceiptInfo = Types.ReceiptInfo
 export type PurchaseRecorder = Types.PurchaseRecorder
 export type SubscriptionStatus = Types.SubscriptionStatus

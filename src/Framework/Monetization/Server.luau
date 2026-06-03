@@ -26,6 +26,7 @@ type ProductHandler = Types.ProductHandler
 type PurchaseRecorder = Types.PurchaseRecorder
 type SubscriptionStatus = Types.SubscriptionStatus
 type SubscriptionStatusHandler = Types.SubscriptionStatusHandler
+type GamePassHandler = Types.GamePassHandler
 
 local Server = {
 	-- Fires after a developer product is successfully granted: (player, productId).
@@ -36,6 +37,7 @@ local Server = {
 	SubscriptionStatusChanged = Signal.new(),
 
 	_productHandlers = {} :: { [number]: ProductHandler },
+	_gamePassHandlers = {} :: { [number]: GamePassHandler },
 	_subscriptionHandlers = {} :: { [string]: SubscriptionStatusHandler },
 	_gamePassCache = {} :: { [Player]: { [number]: boolean } },
 	_recorder = nil :: PurchaseRecorder?,
@@ -74,8 +76,16 @@ function Server.init(self: ServerClass)
 					cache[gamePassId] = true
 				end
 				self.GamePassPurchased:fire(player, gamePassId)
+				self:_invokeGamePassHandler(player, gamePassId)
 			end
 		)
+	)
+
+	table.insert(
+		self._connections,
+		Players.PlayerAdded:Connect(function(player: Player)
+			self:grantRegisteredGamePassesForPlayer(player)
+		end)
 	)
 
 	table.insert(
@@ -191,6 +201,40 @@ end
 
 function Server.unregisterProduct(self: ServerClass, productId: number)
 	self._productHandlers[productId] = nil
+end
+
+function Server.registerGamePass(self: ServerClass, gamePassId: number, handler: GamePassHandler)
+	assert(type(gamePassId) == "number", "[Monetization.Server] gamePassId must be a number")
+	assert(type(handler) == "function", "[Monetization.Server] handler must be a function")
+	self._gamePassHandlers[gamePassId] = handler
+end
+
+function Server.unregisterGamePass(self: ServerClass, gamePassId: number)
+	self._gamePassHandlers[gamePassId] = nil
+end
+
+function Server._invokeGamePassHandler(self: any, player: Player, gamePassId: number)
+	local handler = self._gamePassHandlers[gamePassId]
+	if not handler then
+		return
+	end
+
+	local ok, err = pcall(handler, player)
+	if not ok then
+		warnOnce(`game pass handler for {gamePassId} errored: {err}`)
+	end
+end
+
+--[=[
+	Runs handlers for every registered game pass the player already owns.
+	Also runs automatically on `Players.PlayerAdded`.
+]=]
+function Server.grantRegisteredGamePassesForPlayer(self: ServerClass, player: Player)
+	for gamePassId in self._gamePassHandlers do
+		if self:ownsGamePass(player, gamePassId) then
+			self:_invokeGamePassHandler(player, gamePassId)
+		end
+	end
 end
 
 local function markProcessed(self: any, player: Player?, purchaseId: string)

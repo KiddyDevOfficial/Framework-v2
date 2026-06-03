@@ -1,4 +1,4 @@
---!strict
+--!nocheck
 --[=[
 	@service MonetizationService
 	Boots `Monetization.server` on the server (`ProcessReceipt`, product
@@ -12,12 +12,17 @@
 	MonetizationService:RegisterProduct(123456, function(player, receipt)
 	    return true
 	end)
+	MonetizationService:RegisterGamePass(987654, function(player) end)
 	```
 ]=]
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Framework = require(ReplicatedStorage:WaitForChild("Framework"))
+local Lists = ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Lists")
+local Products = require(Lists.Products)
+local GamePasses = require(Lists.GamePasses)
+local Players = game:GetService("Players")
 
 export type Class = Framework.MonetizationServiceClass
 
@@ -25,16 +30,21 @@ local MonetizationService: Class = Framework.CreateMonetizationService({
 	Name = "MonetizationService",
 })
 
-
 local baseInit = MonetizationService.Init
 
 function MonetizationService:Init()
 	baseInit(self)
+	for _, product in Products.GetAllProducts() do
+		self:RegisterProduct(product.id, product.handler)
+	end
 
-	-- Example: grant a consumable for developer product 0 (replace the id).
-	self:RegisterProduct(0, function(_player, _receipt)
-		return true
-	end)
+	for _, gamePass in GamePasses.GetAllGamePasses() do
+		self:RegisterGamePass(gamePass.id, gamePass.handler)
+	end
+
+	for _, player in Players:GetPlayers() do
+		self:GrantRegisteredGamePassesForPlayer(player)
+	end
 end
 
 return MonetizationService

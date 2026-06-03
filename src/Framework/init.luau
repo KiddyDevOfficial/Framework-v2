@@ -16,6 +16,8 @@
 	  * `Monetization`      - `MarketplaceService` wrapper: developer
 	                          products, game passes, ProcessReceipt routing
 	                          (`Monetization.server` / `Monetization.client`).
+	  * `GlobalMessaging`   - cross-server `MessagingService` subscribe /
+	                          publish (`GlobalMessaging.server`, server-only).
 	  * `Symbol`            - opaque identity tokens.
 	  * `Enum`              - immutable, comparable enumerations.
 	  * `Types`             - `Option<T>`, `Result<T, E>`, helpers.
@@ -59,8 +61,10 @@ local Types = require(script.Types)
 local DataService = require(script.DataService)
 local DataAdapter = require(script.Adapters.Data)
 local MonetizationAdapter = require(script.Adapters.Monetization)
+local GlobalMessagingAdapter = require(script.Adapters.GlobalMessaging)
 local Networking = require(script.Networking)
 local Monetization = require(script.Monetization)
+local GlobalMessaging = require(script.GlobalMessaging)
 local Util = require(script.Util)
 
 local Framework = {}
@@ -72,6 +76,7 @@ Framework.CreateDataService = DataAdapter.CreateService
 Framework.CreateDataController = DataAdapter.CreateController
 Framework.CreateMonetizationService = MonetizationAdapter.CreateService
 Framework.CreateMonetizationController = MonetizationAdapter.CreateController
+Framework.CreateGlobalMessagingService = GlobalMessagingAdapter.CreateService
 
 Framework.IsService = Modular.IsService
 Framework.IsController = Modular.IsController
@@ -105,6 +110,7 @@ Framework.Types = Types
 Framework.DataService = DataService
 Framework.Networking = Networking
 Framework.Monetization = Monetization
+Framework.GlobalMessaging = GlobalMessaging
 
 Framework.Util = Util
 Framework.Trove = Util.Trove
@@ -156,10 +162,19 @@ export type MonetizationControllerClass = MonetizationAdapter.ControllerClass
 export type MonetizationServiceOptions = MonetizationAdapter.ServerOptions
 export type MonetizationControllerOptions = MonetizationAdapter.ClientOptions
 export type ProductHandler = Monetization.ProductHandler
+export type GamePassHandler = Monetization.GamePassHandler
 export type ReceiptInfo = Monetization.ReceiptInfo
 export type PurchaseRecorder = Monetization.PurchaseRecorder
 export type SubscriptionStatus = Monetization.SubscriptionStatus
 export type SubscriptionStatusHandler = Monetization.SubscriptionStatusHandler
+export type GlobalMessagingServer = GlobalMessaging.Server
+export type GlobalMessagingServiceClass = GlobalMessagingAdapter.ServiceClass
+export type GlobalMessagingServiceOptions = GlobalMessagingAdapter.ServerOptions
+export type GlobalMessage = GlobalMessaging.Message
+export type GlobalMessageHandler = GlobalMessaging.MessageHandler
+export type GlobalMessagingBank = GlobalMessaging.Bank
+export type GlobalMessageTopic<Args> = GlobalMessaging.Topic<Args>
+export type GlobalMessageTopicMessage<Args> = GlobalMessaging.TopicMessage<Args>
 export type Trove = Util.Trove
 export type Timer = Util.Timer
 export type Promise<T> = Util.Promise<T>

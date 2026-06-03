@@ -20,6 +20,9 @@ export type ReceiptInfo = {
 -- persisted; only then is the receipt acknowledged as `PurchaseGranted`.
 export type ProductHandler = (player: Player, receipt: ReceiptInfo) -> boolean
 
+-- Called when a player buys a registered game pass or already owns one on join.
+export type GamePassHandler = (player: Player) -> ()
+
 -- Optional persistence hooks for receipt de-duplication across servers.
 export type PurchaseRecorder = {
 	wasProcessed: (player: Player, purchaseId: string) -> boolean,
@@ -49,6 +52,9 @@ export type ServerClass = {
 	setPurchaseRecorder: (self: ServerClass, recorder: PurchaseRecorder?) -> (),
 	registerProduct: (self: ServerClass, productId: number, handler: ProductHandler) -> (),
 	unregisterProduct: (self: ServerClass, productId: number) -> (),
+	registerGamePass: (self: ServerClass, gamePassId: number, handler: GamePassHandler) -> (),
+	unregisterGamePass: (self: ServerClass, gamePassId: number) -> (),
+	grantRegisteredGamePassesForPlayer: (self: ServerClass, player: Player) -> (),
 	registerSubscription: (self: ServerClass, subscriptionId: string, handler: SubscriptionStatusHandler) -> (),
 	unregisterSubscription: (self: ServerClass, subscriptionId: string) -> (),
 	ownsGamePass: (self: ServerClass, player: Player, gamePassId: number) -> boolean,
