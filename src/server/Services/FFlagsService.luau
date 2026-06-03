@@ -8,7 +8,7 @@
 	```lua
 	local FFlags = require(ServerScriptService.Server.Services.FFlagsService)
 
-	if FFlags:GetBoolean("DoubleXP") then
+	if FFlags:Get("DoubleXP") == true then
 	    -- award double XP
 	end
 

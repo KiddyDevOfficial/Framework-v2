@@ -857,7 +857,7 @@ messaging subscription is live before flags initialize.
 ```lua
 local FFlags = require(ServerScriptService.Server.Services.FFlagsService)
 
-if FFlags:GetBoolean("DoubleXP") then
+if FFlags:Get("DoubleXP") == true then
     -- award double XP
 end
 
@@ -882,7 +882,7 @@ local FFlags = require(StarterPlayerScripts.Client.Controllers.FFlagsController)
 
 FFlags:WaitForReady()
 
-if FFlags:GetBoolean("MaintenanceMode") then
+if FFlags:Get("MaintenanceMode") == true then
     -- update UI
 end
 
@@ -891,8 +891,7 @@ FFlags:Observe("EventMultiplier", function(value, oldValue, source)
 end)
 ```
 
-Client methods are read-only: `Get`, `GetBoolean`, `GetNumber`, `GetString`,
-`GetAll`, `Observe`, `Changed`, `WaitForReady`, and `IsReady`. Writes must go
+Client methods are read-only: `Get`, `GetAll`, `Observe`, `Changed`, `WaitForReady`, and `IsReady`. Writes must go
 through the server service.
 
 Raw access is available as `Framework.FFlags.server` / `Framework.FFlags.client`

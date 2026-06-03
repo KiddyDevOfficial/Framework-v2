@@ -116,30 +116,6 @@ function Server.get(self: ServerClass, name: string, defaultValue: FlagValue?): 
 	return value
 end
 
-function Server.getBoolean(self: ServerClass, name: string, defaultValue: boolean?): boolean
-	local value = self:get(name, defaultValue)
-	if value == nil then
-		return false
-	end
-	return value == true
-end
-
-function Server.getNumber(self: ServerClass, name: string, defaultValue: number?): number?
-	local value = self:get(name, defaultValue)
-	if type(value) == "number" then
-		return value
-	end
-	return defaultValue
-end
-
-function Server.getString(self: ServerClass, name: string, defaultValue: string?): string?
-	local value = self:get(name, defaultValue)
-	if type(value) == "string" then
-		return value
-	end
-	return defaultValue
-end
-
 function Server.getAll(self: ServerClass): { [string]: FlagValue }
 	return table.clone(self._flags)
 end

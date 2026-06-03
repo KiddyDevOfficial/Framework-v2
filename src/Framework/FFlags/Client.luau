@@ -132,30 +132,6 @@ function Client.get(self: ClientClass, name: string, defaultValue: FlagValue?): 
 	return value
 end
 
-function Client.getBoolean(self: ClientClass, name: string, defaultValue: boolean?): boolean
-	local value = self:get(name, defaultValue)
-	if value == nil then
-		return false
-	end
-	return value == true
-end
-
-function Client.getNumber(self: ClientClass, name: string, defaultValue: number?): number?
-	local value = self:get(name, defaultValue)
-	if type(value) == "number" then
-		return value
-	end
-	return defaultValue
-end
-
-function Client.getString(self: ClientClass, name: string, defaultValue: string?): string?
-	local value = self:get(name, defaultValue)
-	if type(value) == "string" then
-		return value
-	end
-	return defaultValue
-end
-
 function Client.getAll(self: ClientClass): { [string]: FlagValue }
 	return table.clone(self._flags)
 end

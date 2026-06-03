@@ -8,7 +8,7 @@
 	local FFlags = require(StarterPlayerScripts.Client.Controllers.FFlagsController)
 
 	FFlags:WaitForReady()
-	if FFlags:GetBoolean("DoubleXP") then
+	if FFlags:Get("DoubleXP") == true then
 	    -- update UI
 	end
 	```

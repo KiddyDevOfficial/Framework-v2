@@ -28,9 +28,6 @@ export type ClientOptions = {
 export type ServiceClass = {
 	Server: (self: ServiceClass) -> FFlagsTypes.ServerClass,
 	Get: (self: ServiceClass, name: string, defaultValue: FFlagsTypes.FlagValue?) -> FFlagsTypes.FlagValue?,
-	GetBoolean: (self: ServiceClass, name: string, defaultValue: boolean?) -> boolean,
-	GetNumber: (self: ServiceClass, name: string, defaultValue: number?) -> number?,
-	GetString: (self: ServiceClass, name: string, defaultValue: string?) -> string?,
 	GetAll: (self: ServiceClass) -> { [string]: FFlagsTypes.FlagValue },
 	Set: (self: ServiceClass, name: string, value: FFlagsTypes.FlagValue) -> boolean,
 	SetLocal: (self: ServiceClass, name: string, value: FFlagsTypes.FlagValue) -> (),
@@ -45,9 +42,6 @@ export type ControllerClass = {
 	WaitForReady: (self: ControllerClass) -> (),
 	IsReady: (self: ControllerClass) -> boolean,
 	Get: (self: ControllerClass, name: string, defaultValue: FFlagsTypes.FlagValue?) -> FFlagsTypes.FlagValue?,
-	GetBoolean: (self: ControllerClass, name: string, defaultValue: boolean?) -> boolean,
-	GetNumber: (self: ControllerClass, name: string, defaultValue: number?) -> number?,
-	GetString: (self: ControllerClass, name: string, defaultValue: string?) -> string?,
 	GetAll: (self: ControllerClass) -> { [string]: FFlagsTypes.FlagValue },
 	Observe: (self: ControllerClass, name: string, handler: FFlagsTypes.ChangeHandler) -> () -> (),
 	Changed: any,
@@ -89,18 +83,6 @@ function FFlagsAdapter.CreateService(options: ServerOptions?): ServiceClass
 
 	function def:Get(name: string, defaultValue: FFlagsTypes.FlagValue?): FFlagsTypes.FlagValue?
 		return self._server:get(name, defaultValue)
-	end
-
-	function def:GetBoolean(name: string, defaultValue: boolean?): boolean
-		return self._server:getBoolean(name, defaultValue)
-	end
-
-	function def:GetNumber(name: string, defaultValue: number?): number?
-		return self._server:getNumber(name, defaultValue)
-	end
-
-	function def:GetString(name: string, defaultValue: string?): string?
-		return self._server:getString(name, defaultValue)
 	end
 
 	function def:GetAll(): { [string]: FFlagsTypes.FlagValue }
@@ -175,18 +157,6 @@ function FFlagsAdapter.CreateController(options: ClientOptions?): ControllerClas
 
 	function def:Get(name: string, defaultValue: FFlagsTypes.FlagValue?): FFlagsTypes.FlagValue?
 		return self._client:get(name, defaultValue)
-	end
-
-	function def:GetBoolean(name: string, defaultValue: boolean?): boolean
-		return self._client:getBoolean(name, defaultValue)
-	end
-
-	function def:GetNumber(name: string, defaultValue: number?): number?
-		return self._client:getNumber(name, defaultValue)
-	end
-
-	function def:GetString(name: string, defaultValue: string?): string?
-		return self._client:getString(name, defaultValue)
 	end
 
 	function def:GetAll(): { [string]: FFlagsTypes.FlagValue }
