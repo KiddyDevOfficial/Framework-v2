@@ -18,6 +18,8 @@
 	                          (`Monetization.server` / `Monetization.client`).
 	  * `GlobalMessaging`   - cross-server `MessagingService` subscribe /
 	                          publish (`GlobalMessaging.server`, server-only).
+	  * `FFlags`            - global runtime flags synchronized across live
+	                          servers through `GlobalMessaging`.
 	  * `Symbol`            - opaque identity tokens.
 	  * `Enum`              - immutable, comparable enumerations.
 	  * `Types`             - `Option<T>`, `Result<T, E>`, helpers.
@@ -62,9 +64,11 @@ local DataService = require(script.DataService)
 local DataAdapter = require(script.Adapters.Data)
 local MonetizationAdapter = require(script.Adapters.Monetization)
 local GlobalMessagingAdapter = require(script.Adapters.GlobalMessaging)
+local FFlagsAdapter = require(script.Adapters.FFlags)
 local Networking = require(script.Networking)
 local Monetization = require(script.Monetization)
 local GlobalMessaging = require(script.GlobalMessaging)
+local FFlags = require(script.FFlags)
 local Util = require(script.Util)
 
 local Framework = {}
@@ -77,6 +81,8 @@ Framework.CreateDataController = DataAdapter.CreateController
 Framework.CreateMonetizationService = MonetizationAdapter.CreateService
 Framework.CreateMonetizationController = MonetizationAdapter.CreateController
 Framework.CreateGlobalMessagingService = GlobalMessagingAdapter.CreateService
+Framework.CreateFFlagsService = FFlagsAdapter.CreateService
+Framework.CreateFFlagsController = FFlagsAdapter.CreateController
 
 Framework.IsService = Modular.IsService
 Framework.IsController = Modular.IsController
@@ -111,6 +117,7 @@ Framework.DataService = DataService
 Framework.Networking = Networking
 Framework.Monetization = Monetization
 Framework.GlobalMessaging = GlobalMessaging
+Framework.FFlags = FFlags
 
 Framework.Util = Util
 Framework.Trove = Util.Trove
@@ -175,6 +182,15 @@ export type GlobalMessageHandler = GlobalMessaging.MessageHandler
 export type GlobalMessagingBank = GlobalMessaging.Bank
 export type GlobalMessageTopic<Args> = GlobalMessaging.Topic<Args>
 export type GlobalMessageTopicMessage<Args> = GlobalMessaging.TopicMessage<Args>
+export type FFlagsServer = FFlags.Server
+export type FFlagsClient = FFlags.Client
+export type FFlagsServiceClass = FFlagsAdapter.ServiceClass
+export type FFlagsControllerClass = FFlagsAdapter.ControllerClass
+export type FFlagsServiceOptions = FFlagsAdapter.ServerOptions
+export type FFlagsControllerOptions = FFlagsAdapter.ClientOptions
+export type FFlagValue = FFlags.FlagValue
+export type FFlagChangeSource = FFlags.ChangeSource
+export type FFlagChangeHandler = FFlags.ChangeHandler
 export type Trove = Util.Trove
 export type Timer = Util.Timer
 export type Promise<T> = Util.Promise<T>

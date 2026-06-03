@@ -20,6 +20,8 @@ CollectionService-driven component runtime.
   `CreateMonetizationController`.
 - **GlobalMessaging** — cross-server [MessagingService](https://create.roblox.com/docs/reference/engine/classes/MessagingService)
   subscribe / publish (server-only), via `CreateGlobalMessagingService`.
+- **FFlags** — global runtime flags / shared values synchronized across live
+  servers through GlobalMessaging, via `CreateFFlagsService`.
 - **Util** — `Trove`, `TableUtil`, `StringUtil`, `NumberUtil`, `Debounce`,
   `Timer`, `Promise`, `Observer`, `GuiButton` (CollectionService tag `Button`).
 - **Enum** — immutable, comparable enumerations.
@@ -39,6 +41,7 @@ Everything below is on the root `Framework` table (also available as
 | **Data** | `CreateDataService`, `CreateDataController`, `DataService` (`{ server, client }`) |
 | **Monetization** | `CreateMonetizationService`, `CreateMonetizationController`, `Monetization` (`{ server, client }`), `RegisterProduct`, `RegisterGamePass`, `RegisterSubscription` |
 | **GlobalMessaging** | `CreateGlobalMessagingService`, `GlobalMessaging` (`{ server, Bank }`), `Bank:Event`, `Subscribe`, `Publish` |
+| **FFlags** | `CreateFFlagsService`, `CreateFFlagsController`, `FFlags` (`{ server, client }`), `Get`, `Set`, `Observe`, `Remove` |
 | **Core** | `Signal`, `Networking`, `Enum`, `Symbol`, `Types` |
 | **Util** (also top-level) | `Util`, `Trove`, `TableUtil`, `StringUtil`, `NumberUtil`, `Debounce`, `Timer`, `Promise`, `Observer`, `GuiButton` |
 
@@ -814,6 +817,89 @@ queues backed by ProfileStore (ideal for offline gifts tied to a user id). Use
 
 ---
 
+## FFlags
+
+Global runtime flags / shared values synchronized across live servers through
+`GlobalMessaging`. Use them for live toggles, event multipliers, temporary
+maintenance switches, or server-only config that can change without restarting.
+
+FFlags are **server-owned** and **non-persistent**: every server starts from
+`Shared/FFlags.luau`, then runtime `Set` / `Remove` calls propagate to other
+live servers through a `GlobalMessaging.Bank("FFlags")` topic. Clients receive
+a read-only snapshot and live updates through internal framework networking.
+
+```lua
+-- src/shared/FFlags.luau
+return {
+    DoubleXP = false,
+    MaintenanceMode = false,
+    EventMultiplier = 1,
+    MessageOfTheDay = "",
+}
+```
+
+```lua
+-- src/server/Services/FFlagsService.luau
+local Framework = require(ReplicatedStorage.Framework)
+local Defaults = require(ReplicatedStorage.Shared.FFlags)
+
+return Framework.CreateFFlagsService({
+    Name = "FFlagsService",
+    Defaults = Defaults,
+})
+```
+
+`CreateFFlagsService` depends on `GlobalMessagingService` by default, so the
+messaging subscription is live before flags initialize.
+
+### Server
+
+```lua
+local FFlags = require(ServerScriptService.Server.Services.FFlagsService)
+
+if FFlags:GetBoolean("DoubleXP") then
+    -- award double XP
+end
+
+FFlags:Observe("MaintenanceMode", function(value, oldValue, source)
+    print("Maintenance changed:", oldValue, "->", value, source)
+end)
+
+FFlags:Set("EventMultiplier", 2)      -- local immediately, then all live servers
+FFlags:Remove("MessageOfTheDay")      -- removes across live servers
+FFlags:SetLocal("DoubleXP", true)     -- current server only; no broadcast
+```
+
+### Client (read-only)
+
+```lua
+-- src/client/Controllers/FFlagsController.luau
+return Framework.CreateFFlagsController({ Name = "FFlagsController" })
+```
+
+```lua
+local FFlags = require(StarterPlayerScripts.Client.Controllers.FFlagsController)
+
+FFlags:WaitForReady()
+
+if FFlags:GetBoolean("MaintenanceMode") then
+    -- update UI
+end
+
+FFlags:Observe("EventMultiplier", function(value, oldValue, source)
+    print("Multiplier changed:", oldValue, "->", value, source)
+end)
+```
+
+Client methods are read-only: `Get`, `GetBoolean`, `GetNumber`, `GetString`,
+`GetAll`, `Observe`, `Changed`, `WaitForReady`, and `IsReady`. Writes must go
+through the server service.
+
+Raw access is available as `Framework.FFlags.server` / `Framework.FFlags.client`
+with camelCase methods (`:get`, `:set`, `:observe`, etc.).
+
+---
+
 ## Util
 
 Re-exported on `Framework` and grouped under `Framework.Util`.
@@ -934,22 +1020,28 @@ src/
 │   │   ├── Topic.luau
 │   │   └── Manager.luau
 │   ├── GlobalMessagingService.luau   ← thin re-export
+│   ├── FFlags/                       ← global shared runtime flags
+│   ├── FFlagsService.luau            ← thin re-export
 │   ├── Adapters/
 │   │   ├── Data.luau                 ← CreateDataService / CreateDataController
 │   │   ├── Monetization.luau         ← CreateMonetizationService / Controller
-│   │   └── GlobalMessaging.luau      ← CreateGlobalMessagingService
+│   │   ├── GlobalMessaging.luau      ← CreateGlobalMessagingService
+│   │   └── FFlags.luau               ← CreateFFlagsService / Controller
 │   ├── Util/                         ← Trove, Observer, GuiButton, …
 │   └── Modular/                      ← Service, Controller, Component, Loader
 ├── server/                           ← your server code
 │   └── Services/
 │       ├── DataService.luau              ← typed CreateDataService wrapper
 │       ├── MonetizationService.luau      ← auto-registers Lists on Init
-│       └── GlobalMessagingService.luau   ← cross-server MessagingService
+│       ├── GlobalMessagingService.luau   ← cross-server MessagingService
+│       └── FFlagsService.luau            ← global shared runtime flags
 ├── client/                           ← your client code
 │   └── Controllers/
-│       └── DataController.luau       ← typed CreateDataController wrapper
+│       ├── DataController.luau       ← typed CreateDataController wrapper
+│       └── FFlagsController.luau     ← read-only client FFlags cache
 └── shared/
     ├── Components/                   ← SpinModel, ExampleComponent, …
+    ├── FFlags.luau                   ← default runtime flags
     ├── DataTemplate.luau               ← default profile schema + Path types
     ├── DataTypes.luau                ← re-exports PlayerData / Path aliases
     ├── Lists/                        ← monetization catalogs
