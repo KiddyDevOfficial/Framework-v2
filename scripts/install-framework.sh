@@ -123,7 +123,7 @@ set_wally_dependency() {
     rel="$(relative_path "$TARGET" "$REPO_ROOT")"
     framework_line="Framework = { path = \"$rel\" }"
   else
-    framework_line="Framework = \"leonardhoarau/framework@^$ver\""
+    framework_line="Framework = \"kiddydevofficial/framework@^$ver\""
   fi
 
   if grep -qE '^\s*Framework\s*=' "$wally"; then

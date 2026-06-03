@@ -5,7 +5,7 @@
 
 .DESCRIPTION
     Modes:
-      wally  - Add leonardhoarau/framework to wally.toml, mount Packages in Rojo, run wally install (default).
+      wally  - Add kiddydevofficial/framework to wally.toml, mount Packages in Rojo, run wally install (default).
       local  - Link this repo via Rojo path or Wally path dependency (no registry publish needed).
       rbxm   - Build framework.rbxm and copy it into the target project.
 
@@ -196,7 +196,7 @@ function Set-WallyFrameworkDependency {
         "Framework = { path = `"$relativeRepo`" }"
     }
     else {
-        "Framework = `"leonardhoarau/framework@^$Version`""
+        "Framework = `"kiddydevofficial/framework@^$Version`""
     }
 
     $out = New-Object System.Collections.Generic.List[string]

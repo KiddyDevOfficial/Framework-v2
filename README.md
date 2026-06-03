@@ -1,4 +1,4 @@
-# Framework
+# Goling's Framework
 
 A type-first, modular framework for Roblox / Luau — no classes, no
 inheritance, no abstract methods. Just plain tables with `:Init` / `:Start`
@@ -77,7 +77,7 @@ chmod +x scripts/install-framework.sh
 
 | Mode | Flag | What it does |
 |------|------|----------------|
-| **wally** (default) | `-Mode wally` | Adds `leonardhoarau/framework` to `wally.toml`, mounts `Packages` in Rojo, runs `wally install`. |
+| **wally** (default) | `-Mode wally` | Adds `kiddydevofficial/framework` to `wally.toml`, mounts `Packages` in Rojo, runs `wally install`. |
 | **local** | `-Mode local` | Links this repo: Rojo path to `src/Framework`, or Wally `{ path = "..." }` if no project file. |
 | **rbxm** | `-Mode rbxm` | Builds `framework.rbxm` into `your-game/vendor/`. |
 
@@ -106,7 +106,7 @@ function Install-Framework { & "C:\path\to\Framework-v2\install.ps1" @args }
 ```toml
 # wally.toml
 [dependencies]
-Framework = "leonardhoarau/framework@^0.3.0"
+Framework = "kiddydevofficial/framework@^0.4.0"
 ```
 
 The framework is self-contained — it has no external dependencies.
@@ -1054,7 +1054,29 @@ src/
 
 - `default.project.json` — development place, mounts Framework + empty user folders.
 - `package.project.json` — library-only, for `rojo build` distribution.
-- `wally.toml` — Wally package metadata.
+- `wally.toml` — Wally package metadata (`kiddydevofficial/framework`).
+
+---
+
+## Publishing to Wally
+
+Package name: **`kiddydevofficial/framework`** (display name: **Goling's Framework**).
+
+Wally scopes must match your **lowercase GitHub username**. To publish:
+
+```bash
+wally login          # authenticate with GitHub account KiddyDevOfficial
+wally publish        # from repo root
+```
+
+In a game's `wally.toml`:
+
+```toml
+[dependencies]
+Framework = "kiddydevofficial/framework@^0.4.0"
+```
+
+If publish fails with a scope permission error, run `wally login` with the GitHub account **KiddyDevOfficial**.
 
 ---
 
