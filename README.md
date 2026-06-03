@@ -14,6 +14,8 @@ CollectionService-driven component runtime.
 - **DataService** — persistent, auto-replicated player data backed by a
   vendored [ProfileStore](https://github.com/MadStudioRoblox/ProfileStore),
   via `CreateDataService` / `CreateDataController`.
+- **Leaderstats** — sync configured `DataService` values into each player's
+  leaderstats folder, via `CreateLeaderstatsService`.
 - **Monetization** — `MarketplaceService` wrapper (products, passes,
   [subscriptions](https://create.roblox.com/docs/production/monetization/subscriptions), receipts),
   catalog lists in `Shared/Lists`, via `CreateMonetizationService` /
@@ -39,6 +41,7 @@ Everything below is on the root `Framework` table (also available as
 | --- | --- |
 | **Modular** | `CreateService`, `CreateController`, `CreateComponent`, `AddIn`, `AddServices`, `AddControllers`, `AddComponents`, `RegisterService`, `RegisterController`, `RegisterComponent`, `GetService`, `GetController`, `GetComponent`, `GetComponentInstance`, `GetComponentInstances`, `Start`, `Stop`, `IsStarted`, `OnStart`, `IsService`, `IsController`, `IsComponent` |
 | **Data** | `CreateDataService`, `CreateDataController`, `DataService` (`{ server, client }`) |
+| **Leaderstats** | `CreateLeaderstatsService`, `Leaderstats` (`{ server }`) |
 | **Monetization** | `CreateMonetizationService`, `CreateMonetizationController`, `Monetization` (`{ server, client }`), `RegisterProduct`, `RegisterGamePass`, `RegisterSubscription` |
 | **GlobalMessaging** | `CreateGlobalMessagingService`, `GlobalMessaging` (`{ server, Bank }`), `Bank:Event`, `Subscribe`, `Publish` |
 | **FFlags** | `CreateFFlagsService`, `CreateFFlagsController`, `FFlags` (`{ server, client }`), `Get`, `Set`, `Observe`, `Remove` |
@@ -510,6 +513,43 @@ surfaced through the adapter today; to use them, extend the thin adapter in
 `src/Framework/Data/Profile.luau` (which wraps each ProfileStore profile) and
 `src/Framework/Data/Server.luau`. `DataService:GetProfile(player)` returns the
 framework profile wrapper, whose `.Data` is the same table ProfileStore saves.
+
+---
+
+## Leaderstats
+
+Server-only service that mirrors selected `DataService` paths into each
+player's `leaderstats` folder. Values update automatically when data is
+**set**, **updated**, or **changed** through `DataService`.
+
+Configure entries in `src/shared/Leaderstats.luau`:
+
+```lua
+Leaderstats.Entries = {
+    { Path = "currency", Name = "Coins", Class = "IntValue" },
+    { Path = "level", Name = "Level", Class = "IntValue" },
+    { Path = "xp", Name = "XP", Class = "IntValue" },
+}
+```
+
+```lua
+-- src/server/Services/LeaderstatsService.luau
+local DataService = require(ServerScriptService.Server.Services.DataService)
+local LeaderstatsConfig = require(ReplicatedStorage.Shared.Leaderstats)
+
+return Framework.CreateLeaderstatsService({
+    Name = "LeaderstatsService",
+    Entries = LeaderstatsConfig.Entries,
+    DataService = DataService,
+})
+```
+
+When a profile loads, the service waits for `DataService:WaitForData(player)`,
+creates the leaderstat instances, sets initial values, then listens to
+`DataService:GetChangedSignal(player, path)` for each configured entry.
+
+`Class` is optional — it defaults to `IntValue`, `NumberValue`, or
+`StringValue` based on the current value type.
 
 ---
 
@@ -1020,12 +1060,15 @@ src/
 │   │   └── Manager.luau
 │   ├── GlobalMessagingService.luau   ← thin re-export
 │   ├── FFlags/                       ← global shared runtime flags
+│   ├── Leaderstats/                  ← DataService → leaderstats sync
 │   ├── FFlagsService.luau            ← thin re-export
+│   ├── LeaderstatsService.luau       ← thin re-export
 │   ├── Adapters/
 │   │   ├── Data.luau                 ← CreateDataService / CreateDataController
 │   │   ├── Monetization.luau         ← CreateMonetizationService / Controller
 │   │   ├── GlobalMessaging.luau      ← CreateGlobalMessagingService
-│   │   └── FFlags.luau               ← CreateFFlagsService / Controller
+│   │   ├── FFlags.luau               ← CreateFFlagsService / Controller
+│   │   └── Leaderstats.luau          ← CreateLeaderstatsService
 │   ├── Util/                         ← Trove, Observer, GuiButton, …
 │   └── Modular/                      ← Service, Controller, Component, Loader
 ├── server/                           ← your server code
@@ -1033,7 +1076,8 @@ src/
 │       ├── DataService.luau              ← typed CreateDataService wrapper
 │       ├── MonetizationService.luau      ← auto-registers Lists on Init
 │       ├── GlobalMessagingService.luau   ← cross-server MessagingService
-│       └── FFlagsService.luau            ← global shared runtime flags
+│       ├── FFlagsService.luau            ← global shared runtime flags
+│       └── LeaderstatsService.luau       ← player leaderstats display
 ├── client/                           ← your client code
 │   └── Controllers/
 │       ├── DataController.luau       ← typed CreateDataController wrapper
@@ -1041,6 +1085,7 @@ src/
 └── shared/
     ├── Components/                   ← SpinModel, ExampleComponent, …
     ├── FFlags.luau                   ← default runtime flags
+    ├── Leaderstats.luau              ← leaderstats entry config
     ├── DataTemplate.luau               ← default profile schema + Path types
     ├── DataTypes.luau                ← re-exports PlayerData / Path aliases
     ├── Lists/                        ← monetization catalogs
