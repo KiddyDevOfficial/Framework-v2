@@ -15,6 +15,7 @@ local Timer = require(script.Timer)
 local Promise = require(script.Promise)
 local GuiButton = require(script.GuiButton)
 local Observer = require(script.Observer)
+local StateMachine = require(script.StateMachine)
 
 local Util = {
 	Trove = Trove,
@@ -26,11 +27,17 @@ local Util = {
 	Promise = Promise,
 	GuiButton = GuiButton,
 	Observer = Observer,
+	StateMachine = StateMachine,
 }
 
 export type Trove = Trove.Trove
 export type Timer = Timer.Timer
 export type Promise<T> = Promise.Promise<T>
 export type Observer<T> = Observer.Observer<T>
+export type StateMachine<D> = StateMachine.StateMachine<D>
+export type StateConfig<D> = StateMachine.StateConfig<D>
+export type StateContext<D> = StateMachine.Context<D>
+export type StateMachineConfig<D> = StateMachine.Config<D>
+export type StateMachineGroup<K, D> = StateMachine.Group<K, D>
 
 return Util

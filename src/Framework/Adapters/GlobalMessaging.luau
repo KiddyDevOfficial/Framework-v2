@@ -23,6 +23,7 @@ export type ServerOptions = {
 	TopicPrefix: string?,
 }
 
+
 export type ServiceClass = {
 	Server: (self: ServiceClass) -> GlobalMessagingTypes.ServerClass,
 	Subscribe: (self: ServiceClass, topic: string, handler: GlobalMessagingTypes.MessageHandler) -> () -> (),

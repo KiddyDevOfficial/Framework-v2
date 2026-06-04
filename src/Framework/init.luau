@@ -27,7 +27,8 @@
 	  * `Types`             - `Option<T>`, `Result<T, E>`, helpers.
 	  * `Util`              - `Trove`, `TableUtil`, `StringUtil`,
 	                          `NumberUtil`, `Debounce`, `Timer`, `Promise`,
-	                          `GuiButton` (also re-exported at top level).
+	                          `StateMachine`, `GuiButton` (also re-exported
+	                          at top level).
 
 	Typed fetch pattern (canonical): every framework unit module already
 	returns its typed singleton, so just `require` it directly - no
@@ -62,7 +63,7 @@ local Signal = require(script.Signal)
 local Symbol = require(script.Symbol)
 local Enum = require(script.Enum)
 local Types = require(script.Types)
-local DataService = require(script.DataService)
+local DataService = require(script.Data)
 local DataAdapter = require(script.Adapters.Data)
 local MonetizationAdapter = require(script.Adapters.Monetization)
 local GlobalMessagingAdapter = require(script.Adapters.GlobalMessaging)
@@ -135,6 +136,7 @@ Framework.Timer = Util.Timer
 Framework.Promise = Util.Promise
 Framework.GuiButton = Util.GuiButton
 Framework.Observer = Util.Observer
+Framework.StateMachine = Util.StateMachine
 
 export type Signal<T...> = Signal.Signal<T...>
 export type Connection = Signal.Connection
@@ -205,6 +207,11 @@ export type Trove = Util.Trove
 export type Timer = Util.Timer
 export type Promise<T> = Util.Promise<T>
 export type Observer<T> = Util.Observer<T>
+export type StateMachine<D> = Util.StateMachine<D>
+export type StateConfig<D> = Util.StateConfig<D>
+export type StateContext<D> = Util.StateContext<D>
+export type StateMachineConfig<D> = Util.StateMachineConfig<D>
+export type StateMachineGroup<K, D> = Util.StateMachineGroup<K, D>
 
 table.freeze(Framework)
 return Framework

@@ -25,7 +25,8 @@ CollectionService-driven component runtime.
 - **FFlags** — global runtime flags / shared values synchronized across live
   servers through GlobalMessaging, via `CreateFFlagsService`.
 - **Util** — `Trove`, `TableUtil`, `StringUtil`, `NumberUtil`, `Debounce`,
-  `Timer`, `Promise`, `Observer`, `GuiButton` (CollectionService tag `Button`).
+  `Timer`, `Promise`, `Observer`, `StateMachine`, `GuiButton`
+  (CollectionService tag `Button`).
 - **Enum** — immutable, comparable enumerations.
 - **Symbol** — opaque identity tokens.
 - **Types** — `Option<T>`, `Result<T, E>`, helpers.
@@ -46,7 +47,7 @@ Everything below is on the root `Framework` table (also available as
 | **GlobalMessaging** | `CreateGlobalMessagingService`, `GlobalMessaging` (`{ server, Bank }`), `Bank:Event`, `Subscribe`, `Publish` |
 | **FFlags** | `CreateFFlagsService`, `CreateFFlagsController`, `FFlags` (`{ server, client }`), `Get`, `Set`, `Observe`, `Remove` |
 | **Core** | `Signal`, `Networking`, `Enum`, `Symbol`, `Types` |
-| **Util** (also top-level) | `Util`, `Trove`, `TableUtil`, `StringUtil`, `NumberUtil`, `Debounce`, `Timer`, `Promise`, `Observer`, `GuiButton` |
+| **Util** (also top-level) | `Util`, `Trove`, `TableUtil`, `StringUtil`, `NumberUtil`, `Debounce`, `Timer`, `Promise`, `Observer`, `StateMachine`, `GuiButton` |
 
 **Typed requires (recommended):** service/controller modules already *are*
 the singleton. Prefer `require(path.to.DataService)` over
@@ -953,6 +954,7 @@ Re-exported on `Framework` and grouped under `Framework.Util`.
 | `Timer` | Heartbeat-driven timers with pause/resume. |
 | `Promise` | Lightweight promise type for async flows. |
 | `Observer` | Typed observable value (`set`, `observe`, `Changed` signal). |
+| `StateMachine` | Shared finite state machine + per-key `group` (see below). |
 | `GuiButton` | Hover/press tweens + sounds for GUI tagged `Button`. Optional `SizeFactor` attribute. |
 
 ```lua
@@ -962,6 +964,71 @@ master:add(workspace.ChildAdded:Connect(...))
 
 Framework.GuiButton.bindTagged()  -- all CollectionService "Button" tags
 ```
+
+---
+
+## StateMachine
+
+A shared, type-first finite state machine. Identical on server and client for
+any mechanic where an entity is always in exactly one state and only certain
+transitions are legal. Each machine carries a typed, mutable `data` payload,
+fires a `Changed` signal, and exposes per-state `onEnter` / `onExit` hooks.
+Reachable as `Framework.StateMachine`.
+
+```lua
+local StateMachine = Framework.StateMachine
+
+type MechanicData = { ticks: number }
+
+local fsm = StateMachine.new({
+    initial = "Idle",
+    data = { ticks = 0 } :: MechanicData,
+    states = {
+        Idle     = { transitions = { "Active" } },
+        Active   = {
+            transitions = { "Idle", "Cooldown" },
+            onEnter = function(ctx) ctx.data.ticks += 1 end,
+        },
+        Cooldown = { transitions = { "Idle" } },
+    },
+})
+
+fsm:transition("Active")   -- legal only when allowed; returns false otherwise
+fsm:force("Cooldown")      -- bypass source whitelist + guard
+fsm:can("Active")          -- preview without transitioning
+fsm:update(dt)             -- run current state's onUpdate
+fsm:destroy()
+```
+
+| Method | Purpose |
+| --- | --- |
+| `new(config)` | Create a machine; enters `initial` (`onEnter` with `from = nil`). |
+| `get` / `is` / `getData` | Read current state and shared payload. |
+| `can(to)` | Whether `transition(to)` would currently succeed. |
+| `transition(to)` | Legal transition (source whitelist + target `guard`). |
+| `force(to)` | Transition ignoring whitelist + guard (still runs hooks). |
+| `update(dt)` | Run the current state's `onUpdate(data, dt)`. |
+| `onEnter` / `onExit` | Subscribe to a state's entries/exits (returns a `Connection`). |
+| `destroy` | Tear down all signals. |
+
+**Per-entity groups** — `StateMachine.group` keeps one machine per key
+(`Player`, `Instance`, string id, …), created on demand. Pass a shared
+`Config` (each key gets a deep-copied `data` table) or a `builder(key)`:
+
+```lua
+local ExampleStates = require(ReplicatedStorage.Shared.StateMachines.ExampleStates)
+
+local group = Framework.StateMachine.group(ExampleStates.config)
+-- local group = Framework.StateMachine.group(ExampleStates.build)  -- per-key data
+
+group:transition(player, "Active")
+group:force(player, "Cooldown")
+RunService.Heartbeat:Connect(function(dt) group:update(dt) end)
+Players.PlayerRemoving:Connect(function(p) group:remove(p) end)
+```
+
+`Shared/StateMachines/ExampleStates.luau` ships as a copy-paste starter
+(Idle / Active / Cooldown).
 
 ---
 
@@ -1048,7 +1115,6 @@ src/
 │   ├── Symbol.luau
 │   ├── Enum.luau
 │   ├── Types.luau
-│   ├── DataService.luau              ← thin re-export of Data/
 │   ├── Data/                         ← player data (server / client / Data tree)
 │   │   ├── Profile.luau              ← ProfileStore persistence adapter
 │   │   └── ProfileStore.luau         ← vendored MadStudio/ProfileStore
@@ -1058,18 +1124,15 @@ src/
 │   │   ├── Bank.luau
 │   │   ├── Topic.luau
 │   │   └── Manager.luau
-│   ├── GlobalMessagingService.luau   ← thin re-export
 │   ├── FFlags/                       ← global shared runtime flags
 │   ├── Leaderstats/                  ← DataService → leaderstats sync
-│   ├── FFlagsService.luau            ← thin re-export
-│   ├── LeaderstatsService.luau       ← thin re-export
 │   ├── Adapters/
 │   │   ├── Data.luau                 ← CreateDataService / CreateDataController
 │   │   ├── Monetization.luau         ← CreateMonetizationService / Controller
 │   │   ├── GlobalMessaging.luau      ← CreateGlobalMessagingService
 │   │   ├── FFlags.luau               ← CreateFFlagsService / Controller
 │   │   └── Leaderstats.luau          ← CreateLeaderstatsService
-│   ├── Util/                         ← Trove, Observer, GuiButton, …
+│   ├── Util/                         ← Trove, Observer, StateMachine, GuiButton, …
 │   └── Modular/                      ← Service, Controller, Component, Loader
 ├── server/                           ← your server code
 │   └── Services/
@@ -1093,6 +1156,8 @@ src/
     │   └── GamePasses.luau           ← game passes + grant handlers
     ├── Messaging/                    ← GlobalMessaging banks (cross-server)
     │   └── ExampleGlobalNet.luau     ← starter bank (copy for your topics)
+    ├── StateMachines/                ← shared FSM definitions
+    │   └── ExampleStates.luau        ← starter FSM definition (copy & edit)
     └── Networks/                     ← Networking banks (client + server)
         └── ExampleNet.luau
 ```
