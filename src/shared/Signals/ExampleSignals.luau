@@ -30,6 +30,6 @@ export type PlayerStateChangedArgs = {
 }
 
 return {
-	--RoundStarted = Bank:Signal<string>("RoundStarted") :: Framework.GlobalSignal<string>,
-	--PlayerStateChanged = Bank:Signal<PlayerStateChangedArgs>("PlayerStateChanged") :: Framework.GlobalSignal<PlayerStateChangedArgs>,
+	--RoundStarted = Bank:Signal("RoundStarted") :: Framework.GlobalSignal<string>,
+	--PlayerStateChanged = Bank:Signal("PlayerStateChanged") :: Framework.GlobalSignal<PlayerStateChangedArgs>,
 }
