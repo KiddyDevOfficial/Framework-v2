@@ -10,6 +10,8 @@ CollectionService-driven component runtime.
 - **Component** — per-`Instance` module bound by tag (`:Construct`, `:Start`, `:Stop`, …).
 - **Loader** — discovery, dependency-aware bootstrap, lifecycle binding.
 - **Signal\<T...\>** — generic, type-safe events.
+- **GlobalSignals** — shared in-process signal banks for scripts in the same
+  server/client VM.
 - **Networking** — typed remote banks (`Event`, `UnreliableEvent`, `Request`).
 - **DataService** — persistent, auto-replicated player data backed by a
   vendored [ProfileStore](https://github.com/MadStudioRoblox/ProfileStore),
@@ -44,6 +46,7 @@ Everything below is on the root `Framework` table (also available as
 | **Data** | `CreateDataService`, `CreateDataController`, `DataService` (`{ server, client }`) |
 | **Leaderstats** | `CreateLeaderstatsService`, `Leaderstats` (`{ server }`) |
 | **Monetization** | `CreateMonetizationService`, `CreateMonetizationController`, `Monetization` (`{ server, client }`), `RegisterProduct`, `RegisterGamePass`, `RegisterSubscription` |
+| **GlobalSignals** | `GlobalSignals`, `GlobalSignals.Bank`, `GlobalSignals.Signal`, `Bank:Signal` |
 | **GlobalMessaging** | `CreateGlobalMessagingService`, `GlobalMessaging` (`{ server, Bank }`), `Bank:Event`, `Subscribe`, `Publish` |
 | **FFlags** | `CreateFFlagsService`, `CreateFFlagsController`, `FFlags` (`{ server, client }`), `Get`, `Set`, `Observe`, `Remove` |
 | **Core** | `Signal`, `Networking`, `Enum`, `Symbol`, `Types` |
@@ -551,6 +554,48 @@ creates the leaderstat instances, sets initial values, then listens to
 
 `Class` is optional — it defaults to `IntValue`, `NumberValue`, or
 `StringValue` based on the current value type.
+
+---
+
+## GlobalSignals
+
+Shared in-process signal banks for scripts running in the same server/client
+VM. Use this when multiple modules need to publish/listen to lightweight Lua
+events without passing signal objects around.
+
+This is **not** a RemoteEvent layer and does not cross the client/server
+boundary. Use `Networking` for remotes and `GlobalMessaging` for cross-server
+MessagingService topics.
+
+```lua
+-- src/shared/Signals/GameSignals.luau
+local GlobalSignals = require(ReplicatedStorage.Framework).GlobalSignals
+local Bank = GlobalSignals.Bank("Game")
+
+export type PlayerStateArgs = {
+    player: Player,
+    state: string,
+}
+
+return {
+    RoundStarted = Bank:Signal<string>("RoundStarted") :: GlobalSignals.Signal<string>,
+    PlayerStateChanged = Bank:Signal<PlayerStateArgs>("PlayerStateChanged") :: GlobalSignals.Signal<PlayerStateArgs>,
+}
+```
+
+```lua
+local Signals = require(ReplicatedStorage.Shared.Signals.GameSignals)
+
+Signals.RoundStarted:connect(function(mapName)
+    print("round started", mapName)
+end)
+
+Signals.RoundStarted:fire("Arena")
+```
+
+`GlobalSignals.Bank("Name")` and `Bank:Signal("Name")` are idempotent, so every
+script requiring the same shared signal bank receives the same signal object.
+For quick one-off use, `GlobalSignals.Signal("Name")` uses a default bank.
 
 ---
 
@@ -1118,6 +1163,7 @@ src/
 │   ├── Data/                         ← player data (server / client / Data tree)
 │   │   ├── Profile.luau              ← ProfileStore persistence adapter
 │   │   └── ProfileStore.luau         ← vendored MadStudio/ProfileStore
+│   ├── GlobalSignals/                ← local shared signal banks
 │   ├── Networking/                   ← typed remote banks
 │   ├── Monetization/                 ← MarketplaceService wrapper
 │   ├── GlobalMessaging/              ← Bank, Topic, MessagingService wrapper
@@ -1156,6 +1202,8 @@ src/
     │   └── GamePasses.luau           ← game passes + grant handlers
     ├── Messaging/                    ← GlobalMessaging banks (cross-server)
     │   └── ExampleGlobalNet.luau     ← starter bank (copy for your topics)
+    ├── Signals/                      ← local GlobalSignals banks
+    │   └── ExampleSignals.luau       ← starter bank (copy for your events)
     ├── StateMachines/                ← shared FSM definitions
     │   └── ExampleStates.luau        ← starter FSM definition (copy & edit)
     └── Networks/                     ← Networking banks (client + server)

@@ -11,6 +11,8 @@
 	  * `CreateController`  - client singleton modules.
 	  * `CreateComponent`   - per-`Instance` modules bound by tag.
 	  * `Signal`            - generic, type-safe event streams.
+	  * `GlobalSignals`     - shared in-process signal banks for scripts in
+	                          the same server/client VM.
 	  * `Networking`        - typed packet/bank remotes (RemoteEvent /
 	                          UnreliableRemoteEvent / RemoteFunction).
 	  * `Monetization`      - `MarketplaceService` wrapper: developer
@@ -70,6 +72,7 @@ local GlobalMessagingAdapter = require(script.Adapters.GlobalMessaging)
 local FFlagsAdapter = require(script.Adapters.FFlags)
 local LeaderstatsAdapter = require(script.Adapters.Leaderstats)
 local Networking = require(script.Networking)
+local GlobalSignals = require(script.GlobalSignals)
 local Monetization = require(script.Monetization)
 local GlobalMessaging = require(script.GlobalMessaging)
 local FFlags = require(script.FFlags)
@@ -121,6 +124,7 @@ Framework.Enum = Enum
 Framework.Types = Types
 Framework.DataService = DataService
 Framework.Networking = Networking
+Framework.GlobalSignals = GlobalSignals
 Framework.Monetization = Monetization
 Framework.GlobalMessaging = GlobalMessaging
 Framework.FFlags = FFlags
@@ -170,6 +174,8 @@ export type NetworkBank = Networking.Bank
 export type NetworkEvent<Args> = Networking.Event<Args>
 export type NetworkUnreliableEvent<Args> = Networking.UnreliableEvent<Args>
 export type NetworkRequest<Args, Return> = Networking.Request<Args, Return>
+export type GlobalSignalBank = GlobalSignals.Bank
+export type GlobalSignal<T...> = GlobalSignals.Signal<T...>
 export type MonetizationServer = Monetization.Server
 export type MonetizationClient = Monetization.Client
 export type MonetizationServiceClass = MonetizationAdapter.ServiceClass

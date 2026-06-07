@@ -33,6 +33,6 @@ export type AnnouncementPayload = {
 }
 
 return {
-	Gift = Bank:Event("Gift") :: Framework.GlobalMessageTopic<GiftPayload>,
-	Announcement = Bank:Event("Announcement") :: Framework.GlobalMessageTopic<AnnouncementPayload>,
+	--Gift = Bank:Event("Gift") :: Framework.GlobalMessageTopic<GiftPayload>,
+	--Announcement = Bank:Event("Announcement") :: Framework.GlobalMessageTopic<AnnouncementPayload>,
 }

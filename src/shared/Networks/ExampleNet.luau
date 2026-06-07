@@ -25,6 +25,6 @@ export type EchoResponse = {
 }
 
 return {
-	Ping = Bank:Event("Ping") :: Framework.NetworkEvent<string>,
-	Echo = Bank:Request("Echo") :: Framework.NetworkRequest<string, EchoResponse>,
+	--Ping = Bank:Event("Ping") :: Framework.NetworkEvent<string>,
+	--Echo = Bank:Request("Echo") :: Framework.NetworkRequest<string, EchoResponse>,
 }
