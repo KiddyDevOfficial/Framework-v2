@@ -578,8 +578,8 @@ export type PlayerStateArgs = {
 }
 
 return {
-    RoundStarted = Bank:Signal<string>("RoundStarted") :: GlobalSignals.Signal<string>,
-    PlayerStateChanged = Bank:Signal<PlayerStateArgs>("PlayerStateChanged") :: GlobalSignals.Signal<PlayerStateArgs>,
+    RoundStarted = Bank:Signal("RoundStarted") :: GlobalSignals.Signal<string>,
+    PlayerStateChanged = Bank:Signal("PlayerStateChanged") :: GlobalSignals.Signal<PlayerStateArgs>,
 }
 ```
 
@@ -593,17 +593,19 @@ end)
 Signals.RoundStarted:fire("Arena")
 ```
 
-`GlobalSignals.Bank("Name")` and `Bank:Signal("Name")` are idempotent, so every
-script requiring the same shared signal bank receives the same signal object.
-For quick one-off use, `GlobalSignals.Signal("Name")` uses a default bank.
+`GlobalSignals.Bank("Name")` and `Bank:Signal("Name")` are idempotent, so
+every script requiring the same shared signal bank receives the same signal
+object. For quick one-off use, `GlobalSignals.Signal("Name")` uses a default
+bank.
 
 ---
 
 ## Networking
 
 Typed remotes grouped into **banks**. Define a shared module once, require it
-on server and client. Remotes are created under
-`ReplicatedStorage._FrameworkNetworking/<BankName>/`.
+on server and client. Runtime `Folder` / remote `Instance` names are
+deterministically obfuscated from the server job id, while code continues to
+use the logical bank and packet names.
 
 ```lua
 -- src/shared/Networks/PlayerNet.luau

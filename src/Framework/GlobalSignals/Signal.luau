@@ -7,8 +7,9 @@
 ]=]
 
 local Signal = require(script.Parent.Parent.Signal)
-type Signal<T...> = Signal.Signal<T...>
+
 type Connection = Signal.Connection
+type BaseSignal<T...> = Signal.Signal<T...>
 
 local GlobalSignal = {}
 GlobalSignal.__index = GlobalSignal
@@ -44,41 +45,41 @@ function GlobalSignal.new<T...>(bankName: string, name: string): GlobalSignal<T.
 end
 
 function GlobalSignal.connect<T...>(self: GlobalSignal<T...>, handler: (T...) -> ()): Connection
-	local s: any = self
-	assert(not s._destroyed, `[Framework.GlobalSignals] {s.BankName}.{s.Name} is destroyed`)
-	return (s._signal :: Signal<T...>):connect(handler)
+	local state: any = self
+	assert(not state._destroyed, `[Framework.GlobalSignals] {state.BankName}.{state.Name} is destroyed`)
+	return (state._signal :: BaseSignal<T...>):connect(handler)
 end
 
 GlobalSignal.Connect = GlobalSignal.connect
 
 function GlobalSignal.once<T...>(self: GlobalSignal<T...>, handler: (T...) -> ()): Connection
-	local s: any = self
-	assert(not s._destroyed, `[Framework.GlobalSignals] {s.BankName}.{s.Name} is destroyed`)
-	return (s._signal :: Signal<T...>):once(handler)
+	local state: any = self
+	assert(not state._destroyed, `[Framework.GlobalSignals] {state.BankName}.{state.Name} is destroyed`)
+	return (state._signal :: BaseSignal<T...>):once(handler)
 end
 
 GlobalSignal.Once = GlobalSignal.once
 
 function GlobalSignal.fire<T...>(self: GlobalSignal<T...>, ...: T...)
-	local s: any = self
-	if s._destroyed then
+	local state: any = self
+	if state._destroyed then
 		return
 	end
-	(s._signal :: Signal<T...>):fire(...)
+	(state._signal :: BaseSignal<T...>):fire(...)
 end
 
 GlobalSignal.Fire = GlobalSignal.fire
 
 function GlobalSignal.wait<T...>(self: GlobalSignal<T...>): ...any
-	local s: any = self
-	assert(not s._destroyed, `[Framework.GlobalSignals] {s.BankName}.{s.Name} is destroyed`)
-	return (s._signal :: Signal<T...>):wait()
+	local state: any = self
+	assert(not state._destroyed, `[Framework.GlobalSignals] {state.BankName}.{state.Name} is destroyed`)
+	return (state._signal :: BaseSignal<T...>):wait()
 end
 
 GlobalSignal.Wait = GlobalSignal.wait
 
 function GlobalSignal.handlerCount<T...>(self: GlobalSignal<T...>): number
-	return ((self :: any)._signal :: Signal<T...>):handlerCount()
+	return ((self :: any)._signal :: BaseSignal<T...>):handlerCount()
 end
 
 GlobalSignal.HandlerCount = GlobalSignal.handlerCount
@@ -88,12 +89,12 @@ function GlobalSignal.isDestroyed<T...>(self: GlobalSignal<T...>): boolean
 end
 
 function GlobalSignal.destroy<T...>(self: GlobalSignal<T...>)
-	local s: any = self
-	if s._destroyed then
+	local state: any = self
+	if state._destroyed then
 		return
 	end
-	s._destroyed = true
-	s._signal:destroy()
+	state._destroyed = true
+	state._signal:destroy()
 end
 
 GlobalSignal.Destroy = GlobalSignal.destroy

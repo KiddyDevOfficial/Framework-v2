@@ -2,7 +2,7 @@
 --[=[
 	@module GlobalSignals.Bank
 	Namespace that owns a group of named in-process signals. Calling
-	`GlobalSignals.Bank("Round")` is idempotent - the same name always
+	`GlobalSignals.Bank("Round")` is idempotent: the same name always
 	returns the same bank instance, and each `Bank:Signal("Name")` returns
 	the same signal object.
 ]=]

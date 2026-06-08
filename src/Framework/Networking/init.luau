@@ -41,9 +41,11 @@
 	local snap = Net.GetSnapshot:InvokeServer(nil)
 	```
 
-	All remotes live under `ReplicatedStorage._FrameworkNetworking/<BankName>/`.
-	Server lazily creates each remote; client `WaitForChild`s it the
-	first time the bank is required, so order of require is safe.
+	At runtime, bank folders and remotes use deterministic obfuscated
+	Instance names derived from the current server job id. Your code still
+	uses the logical bank / packet names. Server lazily creates each remote;
+	client `WaitForChild`s it the first time the bank is required, so order
+	of require is safe.
 ]=]
 
 local Bank = require(script.Bank)

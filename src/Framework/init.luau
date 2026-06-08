@@ -62,6 +62,7 @@
 
 local Modular = require(script.Modular)
 local Signal = require(script.Signal)
+local GlobalSignals = require(script.GlobalSignals)
 local Symbol = require(script.Symbol)
 local Enum = require(script.Enum)
 local Types = require(script.Types)
@@ -119,6 +120,7 @@ Framework.OnStart = Modular.OnStart
 
 Framework.Modular = Modular
 Framework.Signal = Signal
+Framework.GlobalSignals = GlobalSignals
 Framework.Symbol = Symbol
 Framework.Enum = Enum
 Framework.Types = Types
@@ -144,6 +146,8 @@ Framework.StateMachine = Util.StateMachine
 
 export type Signal<T...> = Signal.Signal<T...>
 export type Connection = Signal.Connection
+export type GlobalSignal<T...> = GlobalSignals.Signal<T...>
+export type GlobalSignalBank = GlobalSignals.Bank
 export type Symbol = Symbol.Symbol
 export type Option<T> = Types.Option<T>
 export type Result<T, E> = Types.Result<T, E>
