@@ -52,6 +52,7 @@ export type ValueOf<E> = EnumValue
 	Creates a frozen enum from a list of names. Each entry becomes both a
 	field on the returned table and an entry in the internal lookup tables.
 ]=]
+
 function Enum.create(name: string, names: { string }): any
 	local self: any = {
 		__name = name,

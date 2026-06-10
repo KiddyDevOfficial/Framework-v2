@@ -604,8 +604,9 @@ bank.
 
 Typed remotes grouped into **banks**. Define a shared module once, require it
 on server and client. Runtime `Folder` / remote `Instance` names are
-deterministically obfuscated from the server job id, while code continues to
-use the logical bank and packet names.
+deterministically obfuscated from `game.GameId` / `game.PlaceId` (values that
+replicate identically to server and client), while code continues to use the
+logical bank and packet names.
 
 ```lua
 -- src/shared/Networks/PlayerNet.luau

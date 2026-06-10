@@ -3,8 +3,15 @@
 	@module Networking.Manager
 	Owns the ReplicatedStorage folder where every Bank parks its remotes.
 	Runtime Instance names are deterministic obfuscations of the logical
-	bank / packet names using the current server job id as a seed. Server
-	lazily creates folders / remotes; client `WaitForChild`s them.
+	bank / packet names. Server lazily creates folders / remotes; client
+	`WaitForChild`s them.
+
+	The seed MUST resolve identically on the server and every client,
+	otherwise the obfuscated names diverge and the client `WaitForChild`s
+	a remote the server never created. `game.JobId` is unsuitable: it is
+	only populated on the server (clients read an empty string in live
+	games), so the seed is derived from `game.GameId` / `game.PlaceId`,
+	which replicate consistently to both data models.
 ]=]
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -20,11 +27,10 @@ local HASH_B = 131
 local HASH_PREFIX = "n"
 
 local function seed(): string
-	local jobId = game.JobId
-	if jobId ~= "" then
-		return jobId
-	end
-	return `{game.PlaceId}:{game.PrivateServerId}:studio`
+	-- Must be identical on server and client. `game.JobId` is not (it is
+	-- empty on the client in live games), so use `GameId`/`PlaceId`, which
+	-- replicate consistently across both data models.
+	return `{game.GameId}:{game.PlaceId}`
 end
 
 local function hash(input: string, multiplier: number): number
