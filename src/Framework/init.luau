@@ -73,7 +73,6 @@ local GlobalMessagingAdapter = require(script.Adapters.GlobalMessaging)
 local FFlagsAdapter = require(script.Adapters.FFlags)
 local LeaderstatsAdapter = require(script.Adapters.Leaderstats)
 local Networking = require(script.Networking)
-local GlobalSignals = require(script.GlobalSignals)
 local Monetization = require(script.Monetization)
 local GlobalMessaging = require(script.GlobalMessaging)
 local FFlags = require(script.FFlags)
@@ -126,7 +125,6 @@ Framework.Enum = Enum
 Framework.Types = Types
 Framework.DataService = DataService
 Framework.Networking = Networking
-Framework.GlobalSignals = GlobalSignals
 Framework.Monetization = Monetization
 Framework.GlobalMessaging = GlobalMessaging
 Framework.FFlags = FFlags
@@ -143,6 +141,9 @@ Framework.Promise = Util.Promise
 Framework.GuiButton = Util.GuiButton
 Framework.Observer = Util.Observer
 Framework.StateMachine = Util.StateMachine
+Framework.Spring = Util.Spring
+Framework.Queue = Util.Queue
+Framework.Cache = Util.Cache
 
 export type Signal<T...> = Signal.Signal<T...>
 export type Connection = Signal.Connection
@@ -166,20 +167,18 @@ export type DataServiceOptions<T = { [string]: any }> = DataAdapter.ServerOption
 export type DataControllerOptions<T = { [string]: any }> = DataAdapter.ClientOptions<T>
 export type DataServiceClass<
 	T = { [string]: any },
-	TPath = DataAdapter.AnyPath,
-	TArrayPath = DataAdapter.AnyArrayPath
+	TPath = AnyDataPath,
+	TArrayPath = AnyDataArrayPath
 > = DataAdapter.ServerClass<T, TPath, TArrayPath>
 export type DataControllerClass<
 	T = { [string]: any },
-	TPath = DataAdapter.AnyPath,
-	TArrayPath = DataAdapter.AnyArrayPath
+	TPath = AnyDataPath,
+	TArrayPath = AnyDataArrayPath
 > = DataAdapter.ClientClass<T, TPath, TArrayPath>
 export type NetworkBank = Networking.Bank
 export type NetworkEvent<Args> = Networking.Event<Args>
 export type NetworkUnreliableEvent<Args> = Networking.UnreliableEvent<Args>
 export type NetworkRequest<Args, Return> = Networking.Request<Args, Return>
-export type GlobalSignalBank = GlobalSignals.Bank
-export type GlobalSignal<T...> = GlobalSignals.Signal<T...>
 export type MonetizationServer = Monetization.Server
 export type MonetizationClient = Monetization.Client
 export type MonetizationServiceClass = MonetizationAdapter.ServiceClass

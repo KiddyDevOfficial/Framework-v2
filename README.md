@@ -27,8 +27,8 @@ CollectionService-driven component runtime.
 - **FFlags** — global runtime flags / shared values synchronized across live
   servers through GlobalMessaging, via `CreateFFlagsService`.
 - **Util** — `Trove`, `TableUtil`, `StringUtil`, `NumberUtil`, `Debounce`,
-  `Timer`, `Promise`, `Observer`, `StateMachine`, `GuiButton`
-  (CollectionService tag `Button`).
+  `Timer`, `Promise`, `Observer`, `StateMachine`, `Spring`, `Queue`, `Cache`,
+  `GuiButton` (CollectionService tag `Button`).
 - **Enum** — immutable, comparable enumerations.
 - **Symbol** — opaque identity tokens.
 - **Types** — `Option<T>`, `Result<T, E>`, helpers.
@@ -50,7 +50,7 @@ Everything below is on the root `Framework` table (also available as
 | **GlobalMessaging** | `CreateGlobalMessagingService`, `GlobalMessaging` (`{ server, Bank }`), `Bank:Event`, `Subscribe`, `Publish` |
 | **FFlags** | `CreateFFlagsService`, `CreateFFlagsController`, `FFlags` (`{ server, client }`), `Get`, `Set`, `Observe`, `Remove` |
 | **Core** | `Signal`, `Networking`, `Enum`, `Symbol`, `Types` |
-| **Util** (also top-level) | `Util`, `Trove`, `TableUtil`, `StringUtil`, `NumberUtil`, `Debounce`, `Timer`, `Promise`, `Observer`, `StateMachine`, `GuiButton` |
+| **Util** (also top-level) | `Util`, `Trove`, `TableUtil`, `StringUtil`, `NumberUtil`, `Debounce`, `Timer`, `Promise`, `Observer`, `StateMachine`, `Spring`, `Queue`, `Cache`, `GuiButton` |
 
 **Typed requires (recommended):** service/controller modules already *are*
 the singleton. Prefer `require(path.to.DataService)` over
@@ -1003,6 +1003,9 @@ Re-exported on `Framework` and grouped under `Framework.Util`.
 | `Promise` | Lightweight promise type for async flows. |
 | `Observer` | Typed observable value (`set`, `observe`, `Changed` signal). |
 | `StateMachine` | Shared finite state machine + per-key `group` (see below). |
+| `Spring` | Physics spring for `number` / `Vector2` / `Vector3` (camera, UI, recoil). |
+| `Queue` | Generic FIFO queue with amortized O(1) `push` / `pop`. |
+| `Cache` | Generic cache with optional LRU capacity + TTL expiry. |
 | `GuiButton` | Hover/press tweens + sounds for GUI tagged `Button`. Optional `SizeFactor` attribute. |
 
 ```lua
@@ -1077,6 +1080,122 @@ Players.PlayerRemoving:Connect(function(p) group:remove(p) end)
 
 `Shared/StateMachines/ExampleStates.luau` ships as a copy-paste starter
 (Idle / Active / Cooldown).
+
+---
+
+## Spring
+
+Physics-based interpolation — the natural alternative to fixed-duration
+tweens for camera follow, UI bounce, recoil, and any value that should
+*chase* a moving target. Drive it from a `Heartbeat` / `RenderStep` hook by
+calling `:step(dt)`. The integrator is the unconditionally stable
+semi-implicit damped harmonic oscillator, so large `dt` spikes never explode.
+Works on `number`, `Vector2`, and `Vector3`. Reachable as `Framework.Spring`.
+
+```lua
+local Spring = Framework.Spring
+
+-- Spring.new(initial, frequency?, dampingRatio?)
+--   frequency    : oscillations/sec; higher = snappier (default 4)
+--   dampingRatio : 1 critically damped (no overshoot), <1 bouncy, >1 sluggish (default 1)
+local camera = Spring.new(Vector3.zero, 4, 1)
+camera:setTarget(Vector3.new(0, 10, 0))
+
+RunService.RenderStepped:Connect(function(dt)
+    workspace.CurrentCamera.CFrame = CFrame.new(camera:step(dt))
+end)
+
+-- A bouncy UI value:
+local scale = Spring.new(1, 6, 0.4)
+button.MouseButton1Click:Connect(function()
+    scale:impulse(2)   -- kick the velocity for a "pop"
+end)
+```
+
+| Method | Purpose |
+| --- | --- |
+| `new(initial, frequency?, dampingRatio?)` | Create a spring resting at `initial`. |
+| `step(dt)` | Advance the simulation and return the new value. |
+| `getValue` / `getVelocity` / `getTarget` | Read current state. |
+| `setTarget(value)` | Set the rest target the spring chases. |
+| `setValue(value, settle?)` | Snap the value; `settle = true` also zeroes velocity + target. |
+| `setVelocity(value)` | Override the current velocity. |
+| `setFrequency(f)` / `setDampingRatio(d)` | Retune at runtime. |
+| `impulse(delta)` | Add `delta` to velocity (an instantaneous kick). |
+| `isSettled(posEps?, velEps?)` | True once at target and stopped. |
+
+---
+
+## Queue
+
+Generic FIFO queue with amortized O(1) `push` / `pop` — it advances two
+indices instead of calling `table.remove`, so dequeuing never shifts the
+backing array. Handy for job pipelines, networking backpressure, turn order,
+and any "process in arrival order" workload. Reachable as `Framework.Queue`.
+
+```lua
+local Queue = Framework.Queue
+
+local jobs = Queue.new()        -- or Queue.new({ "seed1", "seed2" })
+jobs:push("a")
+jobs:push("b")
+
+print(jobs:size())   -- 2
+print(jobs:pop())    -- "a"
+print(jobs:peek())   -- "b"
+
+while not jobs:isEmpty() do
+    process(jobs:pop())
+end
+```
+
+| Method | Purpose |
+| --- | --- |
+| `new(initial?)` | Create a queue, optionally seeded from an array (head first). |
+| `push(value)` | Enqueue at the tail. |
+| `pop()` | Dequeue and return the head, or `nil` when empty. |
+| `peek()` | Return the head without removing it. |
+| `size()` / `isEmpty()` | Inspect length. |
+| `clear()` | Drop all items. |
+| `toArray()` | Snapshot of pending items, head first. |
+
+---
+
+## Cache
+
+Generic in-memory cache with optional **LRU** capacity eviction and optional
+**TTL** expiry. Use it to memoize expensive lookups —
+`MarketplaceService:GetProductInfo`, group ranks, pathfinding — without
+leaking memory or serving stale data forever. Omit both options and it
+behaves like a tidy unbounded table. Reachable as `Framework.Cache`.
+
+```lua
+local Cache = Framework.Cache
+
+-- maxSize : evict least-recently-used past this many entries
+-- ttl     : seconds an entry stays valid (lazy, os.clock based)
+local prices = Cache.new({ maxSize = 200, ttl = 60 })
+
+local function priceOf(id: number): number
+    local hit = prices:get(id)
+    if hit ~= nil then
+        return hit
+    end
+    local info = MarketplaceService:GetProductInfo(id)
+    prices:set(id, info.PriceInRobux or 0)
+    return prices:get(id) :: number
+end
+```
+
+| Method | Purpose |
+| --- | --- |
+| `new(options?)` | Create a cache (`{ maxSize?, ttl? }`). |
+| `set(key, value)` | Insert/replace, marking the key most-recently-used. |
+| `get(key)` | Live value (refreshes recency), or `nil` if absent/expired. |
+| `has(key)` | Presence check without bumping recency. |
+| `remove(key)` / `clear()` | Drop one / all entries. |
+| `size()` | Count of stored entries. |
+| `keys()` | Keys ordered least- to most-recently-used. |
 
 ---
 

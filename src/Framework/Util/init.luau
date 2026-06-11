@@ -16,6 +16,9 @@ local Promise = require(script.Promise)
 local GuiButton = require(script.GuiButton)
 local Observer = require(script.Observer)
 local StateMachine = require(script.StateMachine)
+local Spring = require(script.Spring)
+local Queue = require(script.Queue)
+local Cache = require(script.Cache)
 
 local Util = {
 	Trove = Trove,
@@ -28,6 +31,9 @@ local Util = {
 	GuiButton = GuiButton,
 	Observer = Observer,
 	StateMachine = StateMachine,
+	Spring = Spring,
+	Queue = Queue,
+	Cache = Cache,
 }
 
 export type Trove = Trove.Trove
@@ -39,5 +45,10 @@ export type StateConfig<D> = StateMachine.StateConfig<D>
 export type StateContext<D> = StateMachine.Context<D>
 export type StateMachineConfig<D> = StateMachine.Config<D>
 export type StateMachineGroup<K, D> = StateMachine.Group<K, D>
+export type Spring<T> = Spring.Spring<T>
+export type Animatable = Spring.Animatable
+export type Queue<T> = Queue.Queue<T>
+export type Cache<K, V> = Cache.Cache<K, V>
+export type CacheOptions = Cache.Options
 
 return Util

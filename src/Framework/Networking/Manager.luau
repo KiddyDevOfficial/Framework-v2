@@ -20,16 +20,12 @@ local RunService = game:GetService("RunService")
 local Manager = {}
 
 local ROOT_FOLDER_NAME = "_FrameworkNetworking"
-local WAIT_TIMEOUT = 30
 local HASH_MOD = 2147483647
 local HASH_A = 33
 local HASH_B = 131
 local HASH_PREFIX = "n"
 
 local function seed(): string
-	-- Must be identical on server and client. `game.JobId` is not (it is
-	-- empty on the client in live games), so use `GameId`/`PlaceId`, which
-	-- replicate consistently across both data models.
 	return `{game.GameId}:{game.PlaceId}`
 end
 
@@ -77,8 +73,8 @@ local function getOrCreate(parent: Instance, name: string, className: string): I
 		return instance
 	end
 
-	local existing = parent:WaitForChild(name, WAIT_TIMEOUT)
-	assert(existing, `[Framework.Networking] '{parent:GetFullName()}.{name}' did not replicate within {WAIT_TIMEOUT}s`)
+	local existing = parent:WaitForChild(name)
+	assert(existing, `[Framework.Networking] '{parent:GetFullName()}.{name}' did not replicate.`)
 	assert(
 		existing.ClassName == className,
 		`[Framework.Networking] '{existing:GetFullName()}' exists with class '{existing.ClassName}', expected '{className}'`
