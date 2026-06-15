@@ -1,7 +1,7 @@
 --!strict
 --[=[
 	@module GlobalMessaging.Types
-	Types for cross-server messaging via [MessagingService].
+	Types for cross-server messaging over [MessagingService].
 	https://create.roblox.com/docs/reference/engine/classes/MessagingService
 ]=]
 
@@ -13,7 +13,7 @@ export type Message = {
 export type MessageHandler = (message: Message) -> ()
 
 export type InitOptions = {
-	-- Prepended to every topic (counts toward the 1–80 character limit).
+	-- Prepended to every topic; counts toward the 1-80 character limit
 	TopicPrefix: string?,
 }
 

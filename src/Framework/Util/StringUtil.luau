@@ -1,9 +1,9 @@
 --!strict
 --[=[
 	@module Util.StringUtil
-	Small text helpers Roblox's `string` library lacks: `trim`, `split`,
-	`startsWith`, `endsWith`, `lpad`/`rpad`, `formatNumber` (1234567 →
-	"1,234,567"), and `formatDuration` (seconds → "1h 2m 3s").
+	Text helpers Roblox's `string` library is missing: `trim`, `split`,
+	`startsWith`, `endsWith`, `lpad`/`rpad`, `formatNumber` (1234567 ->
+	"1,234,567"), and `formatDuration` (seconds -> "1h 2m 3s").
 ]=]
 
 local StringUtil = {}
@@ -33,8 +33,8 @@ function StringUtil.contains(s: string, substr: string): boolean
 end
 
 --[=[
-	Splits `s` by the literal `separator` (default `","`). Empty
-	segments are kept, matching JavaScript / Python behavior.
+	Splits `s` on the literal `separator` (default `","`). Empty segments are
+	kept, like JS / Python do.
 ]=]
 function StringUtil.split(s: string, separator: string?): { string }
 	local sep = separator or ","
@@ -79,8 +79,8 @@ function StringUtil.rpad(s: string, width: number, char: string?): string
 end
 
 --[=[
-	Formats a number with thousands separators. Supports negative
-	values and decimal parts. `123456.7` → `"123,456.7"`.
+	Formats a number with thousands separators. Handles negatives and decimals.
+	`123456.7` -> `"123,456.7"`.
 ]=]
 function StringUtil.formatNumber(n: number, separator: string?): string
 	local sep = separator or ","
@@ -101,7 +101,7 @@ function StringUtil.formatNumber(n: number, separator: string?): string
 end
 
 --[=[
-	Formats seconds as `"1h 2m 3s"` (drops zero leading parts).
+	Formats seconds as `"1h 2m 3s"`; drops leading zero parts.
 ]=]
 function StringUtil.formatDuration(seconds: number): string
 	local s = math.max(0, math.floor(seconds))

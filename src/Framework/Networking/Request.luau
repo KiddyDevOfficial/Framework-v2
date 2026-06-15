@@ -3,8 +3,8 @@
 	@module Networking.Request
 	Request/response typed packet (wraps `RemoteFunction`). Generic in
 	`Args` (sent on invoke) and `Return` (handler result). `OnServerInvoke`
-	/ `OnClientInvoke` are *callback properties* - only one handler per
-	side at a time, just like the native `RemoteFunction`.
+	and `OnClientInvoke` are callback properties; one handler per side at a
+	time, same as the native `RemoteFunction`.
 ]=]
 
 local Manager = require(script.Parent.Manager)

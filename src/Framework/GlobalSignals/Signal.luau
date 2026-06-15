@@ -1,9 +1,9 @@
 --!strict
 --[=[
 	@module GlobalSignals.Signal
-	Named in-process signal used by `GlobalSignals.Bank`. This is not a
-	RemoteEvent and not cross-server MessagingService; it is a shared Lua
-	event bus for scripts running in the same server/client VM.
+	Named in-process signal used by `GlobalSignals.Bank`. Not a RemoteEvent,
+	not cross-server MessagingService - just a shared Lua event bus for
+	scripts running in the same server/client VM.
 ]=]
 
 local Signal = require(script.Parent.Parent.Signal)

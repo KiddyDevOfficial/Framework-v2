@@ -2,9 +2,9 @@
 --[=[
 	@module Networking.Event
 	Reliable typed packet (wraps a `RemoteEvent`). Methods are generic
-	in `Args` - declare the bank's packet as
-	`Networking.Event<MyArgsType>` to get autocomplete + type checks
-	on every `:FireServer`, `:OnServerEvent`, etc.
+	in `Args`; declare the bank's packet as `Networking.Event<MyArgsType>`
+	and you get autocomplete and type checks on every `:FireServer`,
+	`:OnServerEvent`, and so on.
 ]=]
 
 local Players = game:GetService("Players")

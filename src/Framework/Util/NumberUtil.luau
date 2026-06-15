@@ -1,7 +1,7 @@
 --!strict
 --[=[
 	@module Util.NumberUtil
-	Math helpers Roblox doesn't ship: `clamp`, `lerp`, `inverseLerp`,
+	Math helpers Roblox doesn't have: `clamp`, `lerp`, `inverseLerp`,
 	`mapRange`, `roundTo`, `snap`, `sign`, `approxEqual`.
 ]=]
 
@@ -21,8 +21,7 @@ function NumberUtil.lerp(a: number, b: number, t: number): number
 end
 
 --[=[
-	Returns `t` in [0, 1] such that `lerp(a, b, t) == value`. `a == b`
-	returns 0.
+	The `t` in [0, 1] where `lerp(a, b, t) == value`. Returns 0 when `a == b`.
 ]=]
 function NumberUtil.inverseLerp(a: number, b: number, value: number): number
 	if a == b then
@@ -32,7 +31,7 @@ function NumberUtil.inverseLerp(a: number, b: number, value: number): number
 end
 
 --[=[
-	Remaps `value` from `[inMin, inMax]` to `[outMin, outMax]`.
+	Remaps `value` from `[inMin, inMax]` onto `[outMin, outMax]`.
 ]=]
 function NumberUtil.mapRange(value: number, inMin: number, inMax: number, outMin: number, outMax: number): number
 	local t = NumberUtil.inverseLerp(inMin, inMax, value)
@@ -44,8 +43,7 @@ function NumberUtil.round(n: number): number
 end
 
 --[=[
-	Rounds `n` to the nearest multiple of `step`. `roundTo(7.4, 0.5)`
-	is `7.5`.
+	Rounds `n` to the nearest multiple of `step`. `roundTo(7.4, 0.5)` is `7.5`.
 ]=]
 function NumberUtil.roundTo(n: number, step: number): number
 	if step == 0 then
@@ -55,8 +53,7 @@ function NumberUtil.roundTo(n: number, step: number): number
 end
 
 --[=[
-	Snaps `n` *down* to the nearest multiple of `step`. `snap(7.9, 0.5)`
-	is `7.5`.
+	Snaps `n` down to the nearest multiple of `step`. `snap(7.9, 0.5)` is `7.5`.
 ]=]
 function NumberUtil.snap(n: number, step: number): number
 	if step == 0 then

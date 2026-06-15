@@ -1,8 +1,8 @@
 --!strict
 --[=[
 	@module Controller
-	Client-side singleton modules. Mirrors `Service`, but the loader will
-	only run a controller's lifecycle when `RunService:IsClient()` is true.
+	Client-side singleton modules. Same as `Service`, except the loader only
+	runs a controller's lifecycle when `RunService:IsClient()` is true.
 
 	```lua
 	-- src/client/Controllers/HudController.luau
@@ -17,9 +17,9 @@
 	return HudController
 	```
 
-	`Name` defaults to the `ModuleScript` name when omitted. The Loader
-	stamps and registers the table when scanning a `Controllers` folder.
-	`Framework.CreateController` remains available for manual registration.
+	`Name` falls back to the `ModuleScript` name when omitted. The Loader
+	stamps and registers the table when it scans a `Controllers` folder, and
+	`Framework.CreateController` is still there for manual registration.
 ]=]
 
 local Symbol = require(script.Parent.Parent.Symbol)
@@ -45,7 +45,7 @@ export type ControllerDef = {
 
 --[=[
 	Stamps `def` as a controller in place and returns it. Same shape as
-	`Service.Create`, distinguished only by tag and load-side guard.
+	`Service.Create`; only the tag and the load-side guard differ.
 ]=]
 function Controller.Create<T>(def: T & Definition): T
 	local d: any = def
@@ -74,9 +74,9 @@ function Controller.Create<T>(def: T & Definition): T
 end
 
 --[=[
-	Stamps a plain module table as a controller. If `moduleScript` is given
-	and `Name` is missing, it defaults to the `ModuleScript` name. Already-
-	stamped tables pass through unchanged. Used by the Loader when scanning
+	Stamps a plain module table as a controller. With `moduleScript` given
+	and `Name` missing, `Name` falls back to the `ModuleScript` name. Already-
+	stamped tables pass through untouched. The Loader uses this when scanning
 	`Controllers` folders.
 ]=]
 function Controller.Prepare(value: any, moduleScript: ModuleScript?): any

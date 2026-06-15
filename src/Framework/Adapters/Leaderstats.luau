@@ -1,7 +1,7 @@
 --!strict
 --[=[
 	@module Adapters.Leaderstats
-	Framework service binding for DataService-driven leaderstats.
+	Framework service binding for the DataService-driven leaderstats.
 ]=]
 
 local RunService = game:GetService("RunService")

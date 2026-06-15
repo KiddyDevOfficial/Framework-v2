@@ -1,10 +1,9 @@
 --!strict
 --[=[
 	@module Util.Trove
-	Aggregates anything that needs deterministic cleanup - connections,
-	Instances, threads, functions, signals, tables with `:destroy` /
-	`:Destroy`. Drop everything into a single trove and call `:clean()`
-	(or `:destroy()`) to dispose them all at once.
+	Collects anything that needs cleaning up - connections, Instances, threads,
+	functions, signals, tables with `:destroy` / `:Destroy`. Throw it all in one
+	trove and call `:clean()` (or `:destroy()`) to dispose it in one go.
 
 	```lua
 	local trove = Trove.new()
@@ -89,7 +88,7 @@ function Trove.remove(self: Trove, object: any): boolean
 end
 
 --[=[
-	Returns a child trove. Cleaning the parent cleans children too.
+	A child trove. Cleaning the parent cleans children too.
 ]=]
 function Trove.extend(self: Trove): Trove
 	local child = Trove.new()

@@ -1,10 +1,10 @@
 --!strict
 --[=[
 	@module Lifecycle
-	Defines the lifecycle hooks every modular unit may opt into. Hooks are
-	called as methods (`module:Hook(...)`), so `self` is always the module's
-	own table - no classes, no metatable trickery for services or controllers,
-	just plain tables with methods.
+	The lifecycle hooks a modular unit can opt into. Hooks are called as
+	methods (`module:Hook(...)`), so `self` is always the module's own table -
+	no classes, no metatable trickery for services or controllers, just plain
+	tables with methods.
 
 	## Service / Controller hooks
 
@@ -68,8 +68,8 @@ Lifecycle.COMPONENT_HOOKS = {
 } :: { string }
 
 --[=[
-	Safely invokes a hook with the module as `self`. Errors are caught and
-	returned so callers can log without crashing the loader.
+	Calls a hook with the module as `self`. Errors are caught and handed back
+	so the caller can log them without taking down the loader.
 ]=]
 function Lifecycle.invoke(target: any, hookName: string, ...: any): (boolean, string?)
 	local hook = target[hookName]

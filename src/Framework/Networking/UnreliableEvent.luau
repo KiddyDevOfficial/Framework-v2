@@ -2,9 +2,9 @@
 --[=[
 	@module Networking.UnreliableEvent
 	Unreliable typed packet (wraps `UnreliableRemoteEvent`). Same API
-	shape as `Event<Args>` but messages may drop or arrive out of
-	order - use for high-frequency low-stakes traffic (movement
-	hints, particle bursts, ...).
+	shape as `Event<Args>`, but messages can drop or arrive out of order;
+	use it for high-frequency low-stakes traffic - movement hints, particle
+	bursts, that sort of thing.
 ]=]
 
 local Players = game:GetService("Players")

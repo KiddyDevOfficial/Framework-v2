@@ -6,15 +6,15 @@
 	    quiet (trailing edge). Returns `(wrapper, cancel)`.
 	  * `throttle(fn, wait)`  - at most one call per `wait`s window
 	    (leading edge). Returns `(wrapper, cancel)`.
-	  * `lock(fn)`            - drops calls while the previous one is
-	    still running. Useful for non-reentrant operations.
+	  * `lock(fn)`            - drops calls while the previous one's still
+	    running. For non-reentrant work.
 ]=]
 
 local Debounce = {}
 
 --[=[
-	Trailing-edge debounce. Each call resets the timer; the wrapped
-	function runs once `wait`s after the *last* call.
+	Trailing-edge debounce. Each call resets the timer; `fn` runs once, `wait`s
+	after the last call.
 ]=]
 function Debounce.debounce<A...>(fn: (A...) -> (), wait: number): (((A...) -> ()), () -> ())
 	local pending: thread?
@@ -40,8 +40,8 @@ function Debounce.debounce<A...>(fn: (A...) -> (), wait: number): (((A...) -> ()
 end
 
 --[=[
-	Leading-edge throttle. First call runs immediately, subsequent calls
-	within `wait` seconds are dropped.
+	Leading-edge throttle. First call runs right away; later calls within `wait`
+	seconds are dropped.
 ]=]
 function Debounce.throttle<A...>(fn: (A...) -> (), wait: number): (((A...) -> ()), () -> ())
 	local lastRun = -math.huge
@@ -63,9 +63,8 @@ function Debounce.throttle<A...>(fn: (A...) -> (), wait: number): (((A...) -> ()
 end
 
 --[=[
-	Drops re-entrant calls. While the wrapped function is running,
-	subsequent invocations are no-ops. Resets on completion (even if
-	the function errored).
+	Drops re-entrant calls. While `fn` is running, further calls do nothing.
+	Resets when it finishes, even if it errored.
 ]=]
 function Debounce.lock<A...>(fn: (A...) -> ()): ((A...) -> ())
 	local running = false

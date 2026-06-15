@@ -1,9 +1,10 @@
 --!strict
 --[=[
 	@module Monetization.Client
-	Client-side monetization helper. Triggers purchase prompts, surfaces
-	purchase-finished events as signals for UI, and caches game-pass
-	ownership / product info to avoid repeated marketplace calls.
+	Client side of monetization. Fires purchase prompts, turns the
+	purchase-finished events into signals your UI can listen on, and caches
+	game-pass ownership / product info so we're not hitting the marketplace
+	over and over.
 ]=]
 
 local MarketplaceService = game:GetService("MarketplaceService")
@@ -39,7 +40,7 @@ local function warnOnce(message: string)
 end
 
 --[=[
-	Connects the marketplace prompt-finished callbacks. Safe to call once.
+	Connects the marketplace prompt-finished callbacks. Call once.
 ]=]
 function Client.init(self: ClientClass)
 	if self._initialized then
@@ -102,7 +103,7 @@ function Client.promptSubscriptionPurchase(self: ClientClass, subscriptionId: st
 end
 
 --[=[
-	Cached `UserOwnsGamePassAsync` for the local player.
+	`UserOwnsGamePassAsync` for the local player, cached.
 ]=]
 function Client.ownsGamePass(self: ClientClass, gamePassId: number): boolean
 	local cached = self._gamePassCache[gamePassId]
@@ -123,7 +124,7 @@ function Client.ownsGamePass(self: ClientClass, gamePassId: number): boolean
 end
 
 --[=[
-	Cached `GetProductInfo`. `infoType` defaults to `Enum.InfoType.Product`.
+	`GetProductInfo`, cached. `infoType` defaults to `Enum.InfoType.Product`.
 ]=]
 function Client.getProductInfo(self: ClientClass, assetId: number, infoType: Enum.InfoType?): any
 	local kind = infoType or Enum.InfoType.Product
@@ -146,8 +147,8 @@ function Client.getProductInfo(self: ClientClass, assetId: number, infoType: Enu
 end
 
 --[=[
-	Cached `GetSubscriptionProductInfoAsync` (client-only; localized pricing).
-	Status checks must run on the server via `Monetization.server:getUserSubscriptionStatus`.
+	`GetSubscriptionProductInfoAsync`, cached (client-only; localized pricing).
+	Status checks have to run on the server via `Monetization.server:getUserSubscriptionStatus`.
 ]=]
 function Client.getSubscriptionProductInfo(self: ClientClass, subscriptionId: string): any?
 	local cached = self._subscriptionInfoCache[subscriptionId]

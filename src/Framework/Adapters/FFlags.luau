@@ -1,7 +1,7 @@
 --!strict
 --[=[
 	@module Adapters.FFlags
-	Framework service binding for global runtime flags synchronized through
+	Framework service binding for the global runtime flags synced over
 	`GlobalMessaging`.
 ]=]
 

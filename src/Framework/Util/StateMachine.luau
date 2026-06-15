@@ -1,14 +1,13 @@
 --!strict
 --[=[
 	@module Util.StateMachine
-	A shared, type-first finite state machine. Works identically on the
-	server and client for any gameplay loop where an entity is always in
-	exactly one state and only certain transitions are legal.
+	A typed finite state machine. Same on server and client. Use it for any
+	loop where an entity is always in exactly one state and only certain
+	transitions are legal.
 
 	Each machine carries a typed `data` payload that every callback can read
-	and mutate, fires a `Changed` signal on every transition, and exposes
-	per-state `onEnter` / `onExit` hooks. Drop a machine into a `Trove` for
-	automatic cleanup.
+	and mutate, fires a `Changed` signal on every transition, and has per-state
+	`onEnter` / `onExit` hooks. Drop one in a `Trove` for cleanup.
 
 	```lua
 	local StateMachine = Framework.StateMachine
@@ -29,12 +28,12 @@
 	})
 
 	fsm:transition("Active")
-	fsm:force("Cooldown")  -- bypass whitelist + guard when needed
+	fsm:force("Cooldown")  -- skips the whitelist + guard
 	```
 
-	**Groups** — one machine per key (`Player`, `Instance`, string id, …).
-	Pass a shared `Config` (each key gets a deep-copied `data` table) or a
-	builder when you need per-key setup:
+	Groups - one machine per key (`Player`, `Instance`, string id, ...). Pass a
+	shared `Config` (each key gets a deep-copied `data` table), or a builder when
+	you need per-key setup:
 
 	```lua
 	local ExampleStates = require(ReplicatedStorage.Shared.StateMachines.ExampleStates)
@@ -42,7 +41,7 @@
 	-- same definition for every key
 	local group = StateMachine.group(ExampleStates.config)
 
-	-- or customize per key
+	-- or per-key
 	local group = StateMachine.group(ExampleStates.build)
 
 	group:transition(player, "Active")
@@ -59,7 +58,7 @@ local StateMachine = {}
 StateMachine.__index = StateMachine
 
 --[=[
-	Passed to every state callback. `from` is `nil` for the initial state's
+	Passed to every state callback. `from` is `nil` on the initial state's
 	entry. `data` is the machine's shared, mutable payload.
 ]=]
 export type Context<D> = {
@@ -70,10 +69,10 @@ export type Context<D> = {
 }
 
 --[=[
-	Configuration for a single state.
+	Config for one state.
 
-	* `transitions` - whitelist of state names this state may move to via
-	  `transition`. `nil` means "any state is allowed". `force` ignores this.
+	* `transitions` - whitelist of states this one may move to via `transition`.
+	  `nil` means any state is allowed. `force` ignores this.
 	* `guard` - runs before entering this state; return `false` to veto.
 	* `onEnter` / `onExit` - lifecycle callbacks.
 	* `onUpdate` - run by `machine:update(dt)` while this is the current state.
@@ -93,7 +92,7 @@ export type Config<D> = {
 }
 
 export type StateMachine<D> = {
-	-- Fired after every transition: `(newState, oldState)`.
+	-- Fires after every transition: `(newState, oldState)`
 	Changed: Signal<string, string>,
 	get: (self: StateMachine<D>) -> string,
 	is: (self: StateMachine<D>, state: string) -> boolean,
@@ -109,8 +108,8 @@ export type StateMachine<D> = {
 }
 
 --[=[
-	Creates a machine and enters the `initial` state (its `onEnter` runs with
-	`from = nil`). Errors if `initial` is not present in `states`.
+	New machine; enters the `initial` state right away (its `onEnter` runs with
+	`from = nil`). Errors if `initial` isn't in `states`.
 ]=]
 function StateMachine.new<D>(config: Config<D>): StateMachine<D>
 	assert(type(config) == "table", "[StateMachine] config table required")
@@ -150,9 +149,9 @@ function StateMachine.getData<D>(self: StateMachine<D>): D
 end
 
 --[=[
-	Returns whether `transition(to)` would currently succeed: target exists,
-	differs from the current state, is allowed by the source whitelist, and
-	passes the target's `guard`.
+	True if `transition(to)` would succeed right now: target exists, differs from
+	the current state, is allowed by the source whitelist, and passes the
+	target's `guard`.
 ]=]
 function StateMachine.can<D>(self: StateMachine<D>, to: string): boolean
 	local s: any = self
@@ -213,8 +212,8 @@ function StateMachine._change<D>(self: StateMachine<D>, to: string): boolean
 end
 
 --[=[
-	Attempts a legal transition. Returns `false` (without side effects) when
-	`can(to)` is false.
+	Tries a legal transition. Returns `false` with no side effects when `can(to)`
+	is false.
 ]=]
 function StateMachine.transition<D>(self: StateMachine<D>, to: string): boolean
 	if not self:can(to) then
@@ -225,9 +224,9 @@ end
 
 --[=[
 	Forces a transition, ignoring the source `transitions` whitelist and the
-	target `guard`. Still runs `onExit` / `onEnter` and fires `Changed`. Use
-	for "from anywhere" effects (interrupts, resets, global events).
-	Returns `false` only if the target is unknown or already current.
+	target `guard`. Still runs `onExit` / `onEnter` and fires `Changed`. For
+	"from anywhere" effects - interrupts, resets, global events. Returns `false`
+	only if the target is unknown or already current.
 ]=]
 function StateMachine.force<D>(self: StateMachine<D>, to: string): boolean
 	local s: any = self
@@ -241,7 +240,7 @@ function StateMachine.force<D>(self: StateMachine<D>, to: string): boolean
 end
 
 --[=[
-	Runs the current state's `onUpdate(data, dt)` if defined. Call this from a
+	Runs the current state's `onUpdate(data, dt)` if it has one. Call from a
 	`Heartbeat` / `Stepped` loop to drive per-frame mechanics.
 ]=]
 function StateMachine.update<D>(self: StateMachine<D>, dt: number)
@@ -265,7 +264,7 @@ local function lazySignal<D>(map: { [string]: Signal<Context<D>> }, state: strin
 end
 
 --[=[
-	Subscribes to entries into `state` (in addition to its config `onEnter`).
+	Subscribes to entries into `state`, on top of its config `onEnter`.
 ]=]
 function StateMachine.onEnter<D>(self: StateMachine<D>, state: string, callback: (ctx: Context<D>) -> ()): Connection
 	local s: any = self
@@ -274,7 +273,7 @@ function StateMachine.onEnter<D>(self: StateMachine<D>, state: string, callback:
 end
 
 --[=[
-	Subscribes to exits from `state` (in addition to its config `onExit`).
+	Subscribes to exits from `state`, on top of its config `onExit`.
 ]=]
 function StateMachine.onExit<D>(self: StateMachine<D>, state: string, callback: (ctx: Context<D>) -> ()): Connection
 	local s: any = self
@@ -303,9 +302,7 @@ function StateMachine.destroy<D>(self: StateMachine<D>)
 	table.clear(s._exitSignals)
 end
 
-----------------------------------------------------------------------
--- Group: one machine per key (e.g. per Player), created on demand.
-----------------------------------------------------------------------
+----- Group: one machine per key (e.g. per Player), created on demand -----
 
 local Group = {}
 Group.__index = Group
@@ -341,12 +338,12 @@ local function configForKey<D>(template: Config<D>, _key: any): Config<D>
 end
 
 --[=[
-	Creates a registry of machines keyed by `K`. Machines are created on
-	demand the first time a key is used.
+	A registry of machines keyed by `K`. Each one is created the first time its
+	key is used.
 
-	* Pass a `Config` — every key shares the same state graph; `data` is
+	* Pass a `Config` - every key shares the same state graph; `data` is
 	  deep-copied per key.
-	* Pass `builder(key)` — return a fresh `Config` when you need per-key
+	* Pass `builder(key)` - return a fresh `Config` when you need per-key
 	  differences (player stats, instance attributes, etc.).
 ]=]
 function StateMachine.group<K, D>(configOrBuilder: Config<D> | ((key: K) -> Config<D>)): Group<K, D>
@@ -368,7 +365,7 @@ function StateMachine.group<K, D>(configOrBuilder: Config<D> | ((key: K) -> Conf
 end
 
 --[=[
-	Returns the machine for `key`, creating it from `builder(key)` if needed.
+	The machine for `key`, building it from `builder(key)` if it doesn't exist yet.
 ]=]
 function Group.get<K, D>(self: Group<K, D>, key: K): StateMachine<D>
 	local s: any = self
@@ -390,7 +387,7 @@ function Group.has<K, D>(self: Group<K, D>, key: K): boolean
 end
 
 --[=[
-	Current state name for `key` (creating the machine if needed).
+	Current state name for `key`, building the machine if needed.
 ]=]
 function Group.state<K, D>(self: Group<K, D>, key: K): string
 	return self:get(key):get()
@@ -417,7 +414,7 @@ function Group.force<K, D>(self: Group<K, D>, key: K, to: string): boolean
 end
 
 --[=[
-	Drives `update(dt)` on every live machine in the group.
+	Runs `update(dt)` on every live machine in the group.
 ]=]
 function Group.update<K, D>(self: Group<K, D>, dt: number)
 	local s: any = self
@@ -438,7 +435,7 @@ function Group.keys<K, D>(self: Group<K, D>): { K }
 end
 
 --[=[
-	Destroys and forgets the machine for `key`.
+	Destroys and drops the machine for `key`.
 ]=]
 function Group.remove<K, D>(self: Group<K, D>, key: K)
 	local s: any = self

@@ -1,14 +1,13 @@
 --!strict
 --[=[
 	@module Monetization
-	Framework-native monetization layer over `MarketplaceService`. Wraps
-	developer products (consumables), game passes (one-time unlocks), and
-	experience subscriptions with a typed, signal-driven API.
-	Self-contained: no external Wally dependencies.
+	A monetization layer over `MarketplaceService`. Covers dev products
+	(consumables), game passes (one-time unlocks), and experience
+	subscriptions behind a typed, signal-driven API. No Wally deps.
 
-	Split into realm singletons, mirroring the `Data` subsystem:
-	  * `Monetization.server` - authoritative `ProcessReceipt`, product
-	    handlers, ownership cache, server-side prompts.
+	Split into per-realm singletons, like the `Data` subsystem:
+	  * `Monetization.server` - the `ProcessReceipt` owner, product handlers,
+	    ownership cache, server-side prompts.
 	  * `Monetization.client` - prompt helpers, cached ownership / product
 	    info, purchase-finished signals for UI.
 
@@ -18,7 +17,7 @@
 	Monetization:init()
 
 	Monetization:registerProduct(123456, function(player, receipt)
-	    -- grant the consumable; return true once the grant is persisted.
+	    -- grant the consumable; return true once it's saved
 	    addGems(player, 100)
 	    return true
 	end)

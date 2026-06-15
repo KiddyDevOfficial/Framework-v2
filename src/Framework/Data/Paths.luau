@@ -3,9 +3,9 @@
 	@module Data.Paths
 	Runtime helpers and broad fallback types for the data path API.
 
-	Luau does not support deriving nested tuple-path unions from arbitrary table
-	types in regular type aliases. Game-specific path autocomplete should come
-	from the schema module itself, e.g. `Shared.DataTemplate.Path`.
+	Luau can't derive nested tuple-path unions from arbitrary table types in a
+	plain type alias, so game-specific path autocomplete has to come from the
+	schema module itself, e.g. `Shared.DataTemplate.Path`.
 ]=]
 
 local Paths = {}

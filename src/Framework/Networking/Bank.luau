@@ -1,11 +1,10 @@
 --!strict
 --[=[
 	@module Networking.Bank
-	Namespace that owns a group of typed packets. Calling
-	`Networking.Bank("Player")` is idempotent - the same name always
-	resolves to the same folder + cached packet objects so two
-	separate shared modules can refer to the same packet without
-	double-binding the remote.
+	Namespace that owns a group of typed packets. `Networking.Bank("Player")`
+	is idempotent - the same name always resolves to the same folder and
+	cached packet objects, so two separate shared modules can refer to the
+	same packet without double-binding the remote.
 ]=]
 
 local Manager = require(script.Parent.Manager)

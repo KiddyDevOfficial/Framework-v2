@@ -6,7 +6,7 @@
 
 local Signal = require(script.Parent.Parent.Signal)
 
--- Shape of the `receiptInfo` table passed to `MarketplaceService.ProcessReceipt`.
+-- The `receiptInfo` table Roblox hands to `MarketplaceService.ProcessReceipt`
 export type ReceiptInfo = {
 	PurchaseId: string,
 	PlayerId: number,
@@ -16,14 +16,14 @@ export type ReceiptInfo = {
 	CurrencyType: Enum.CurrencyType,
 }
 
--- Returns `true` once the product has been granted AND that grant is safely
--- persisted; only then is the receipt acknowledged as `PurchaseGranted`.
+-- Return `true` only after the product is granted AND that grant is saved;
+-- that's the only thing that gets the receipt acknowledged as `PurchaseGranted`.
 export type ProductHandler = (player: Player, receipt: ReceiptInfo) -> boolean
 
--- Called when a player buys a registered game pass or already owns one on join.
+-- Runs when a player buys a registered game pass, or already owns one on join
 export type GamePassHandler = (player: Player) -> ()
 
--- Optional persistence hooks for receipt de-duplication across servers.
+-- Optional persistence hooks so receipts can be de-duped across servers
 export type PurchaseRecorder = {
 	wasProcessed: (player: Player, purchaseId: string) -> boolean,
 	record: (player: Player, purchaseId: string) -> (),
@@ -36,8 +36,8 @@ export type SubscriptionStatus = {
 	IsRenewing: boolean,
 }
 
--- Called on the server when `Players.UserSubscriptionStatusChanged` fires for a
--- registered subscription id (after status is re-fetched).
+-- Runs on the server when `Players.UserSubscriptionStatusChanged` fires for a
+-- registered subscription id, after we re-fetch the status
 export type SubscriptionStatusHandler = (
 	player: Player,
 	subscriptionId: string,

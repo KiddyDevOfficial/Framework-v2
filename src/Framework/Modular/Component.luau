@@ -2,8 +2,8 @@
 --[=[
 	@module Component
 	Per-`Instance` modules driven by `CollectionService`. Each tagged
-	Instance gets its own lightweight component table whose method lookups
-	resolve to the definition - you write method-style code, no `new`
+	Instance gets its own lightweight component table that resolves method
+	lookups back to the definition - you write method-style code, no `new`
 	constructor, no inheritance.
 
 	```lua
@@ -15,7 +15,7 @@
 	}
 
 	function Turret:Construct()
-	    -- self.Instance is preset by the framework
+	    -- self.Instance is already set for you
 	    self.lastFired = 0
 	end
 
@@ -26,13 +26,13 @@
 	return Turret
 	```
 
-	`Name` defaults to the `ModuleScript` name; `Tag` defaults to `Name`
-	when omitted. The Loader stamps and registers the table when scanning
-	a `Components` folder. `Framework.CreateComponent` remains available
-	for manual registration.
+	`Name` defaults to the `ModuleScript` name; leave `Tag` out and it
+	falls back to `Name`. The Loader stamps and registers the table when it
+	scans a `Components` folder, and `Framework.CreateComponent` is still
+	there for manual registration.
 
 	The loader sets `self.Instance` to the tagged Roblox `Instance` and
-	dispatches every hook with `self` bound to the per-instance table.
+	calls every hook with `self` bound to the per-instance table.
 ]=]
 
 local Symbol = require(script.Parent.Parent.Symbol)
@@ -65,9 +65,9 @@ export type ComponentDef = {
 } & ComponentHooks
 
 --[=[
-	Stamps `def` as a component in place and returns it. `def.__index = def`
-	is set so the per-instance tables created by the loader can resolve
-	methods through it without the user touching metatables.
+	Stamps `def` as a component in place and returns it. Sets
+	`def.__index = def` so the per-instance tables the loader creates can
+	resolve methods through it without you ever touching metatables.
 ]=]
 function Component.Create<T>(def: T & Definition): T
 	local d: any = def
@@ -96,10 +96,10 @@ function Component.Create<T>(def: T & Definition): T
 end
 
 --[=[
-	Stamps a plain module table as a component. If `moduleScript` is given,
-	`Name` defaults to the `ModuleScript` name and `Tag` defaults to `Name`
-	when omitted. Already-stamped tables pass through unchanged. Used by the
-	Loader when scanning `Components` folders.
+	Stamps a plain module table as a component. With `moduleScript` given,
+	`Name` falls back to the `ModuleScript` name and `Tag` falls back to
+	`Name`. Already-stamped tables pass through untouched. The Loader uses
+	this when scanning `Components` folders.
 ]=]
 function Component.Prepare(value: any, moduleScript: ModuleScript?): any
 	if Component.Is(value) then
@@ -137,8 +137,8 @@ end
 
 --[=[
 	Builds the lightweight per-instance table for a freshly-tagged Instance.
-	`def` provides method resolution via `__index`; `Instance` is preset so
-	the user's `Construct` hook can immediately reach the Roblox object.
+	`def` handles method resolution via `__index`; `Instance` is set up front
+	so the `Construct` hook can reach the Roblox object straight away.
 ]=]
 function Component.NewInstance(def: any, instance: Instance): any
 	local self = setmetatable({ Instance = instance }, def)

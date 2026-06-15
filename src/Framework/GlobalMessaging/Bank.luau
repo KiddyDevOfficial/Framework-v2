@@ -2,7 +2,7 @@
 --[=[
 	@module GlobalMessaging.Bank
 	Groups typed cross-server topics, mirroring `Networking.Bank`.
-	`GlobalMessaging.Bank("Example")` is idempotent — the same name always
+	`GlobalMessaging.Bank("Example")` is idempotent - the same name always
 	returns the same bank instance.
 ]=]
 

@@ -1,8 +1,8 @@
 --!strict
 --[=[
 	@module Enum
-	Type-safe, immutable enums. Each `EnumValue` is its own table
-	identity - comparisons use `==` and serialize as a stable string name.
+	Type-safe, immutable enums. Each `EnumValue` is its own table identity -
+	compare with `==`, and it serializes as a stable string name.
 
 	```lua
 	local Direction = Enum.create("Direction", { "North", "East", "South", "West" })
@@ -43,13 +43,13 @@ export type Enum<V> = {
 }
 
 --[=[
-	Generic instance-type helper. Given the table returned by `create`,
-	`ValueOf<typeof(MyEnum)>` returns the enum-value type.
+	Instance-type helper. Given the table `create` returns,
+	`ValueOf<typeof(MyEnum)>` gives you the enum-value type.
 ]=]
 export type ValueOf<E> = EnumValue
 
 --[=[
-	Creates a frozen enum from a list of names. Each entry becomes both a
+	Builds a frozen enum from a list of names. Each entry becomes both a
 	field on the returned table and an entry in the internal lookup tables.
 ]=]
 

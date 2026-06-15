@@ -1,11 +1,11 @@
 --!strict
 --[=[
 	@module Monetization.Server
-	Authoritative monetization singleton. Owns `MarketplaceService.ProcessReceipt`,
-	routes developer-product receipts to registered handlers, caches game-pass
-	ownership, and fans out purchase events through signals.
+	The server side of monetization. Owns `MarketplaceService.ProcessReceipt`,
+	hands developer-product receipts to whatever handler you registered, keeps a
+	game-pass ownership cache, and pushes purchase events out through signals.
 
-	Method names are camelCase to match the rest of the framework's
+	Methods are camelCase so they line up with the rest of the framework's
 	`self._xxx:<method>` call sites.
 ]=]
 
@@ -29,11 +29,11 @@ type SubscriptionStatusHandler = Types.SubscriptionStatusHandler
 type GamePassHandler = Types.GamePassHandler
 
 local Server = {
-	-- Fires after a developer product is successfully granted: (player, productId).
+	-- Fires once a dev product is granted: (player, productId)
 	ProductPurchased = Signal.new(),
-	-- Fires after a game pass purchase completes successfully: (player, gamePassId).
+	-- Fires once a game pass purchase goes through: (player, gamePassId)
 	GamePassPurchased = Signal.new(),
-	-- Fires when a tracked subscription's status changes: (player, subscriptionId, status).
+	-- Fires when a tracked subscription's status flips: (player, subscriptionId, status)
 	SubscriptionStatusChanged = Signal.new(),
 
 	_productHandlers = {} :: { [number]: ProductHandler },
@@ -51,8 +51,8 @@ local function warnOnce(message: string)
 end
 
 --[=[
-	Wires `ProcessReceipt`, game-pass purchase callbacks and player cleanup.
-	Safe to call once; subsequent calls are ignored.
+	Hooks up `ProcessReceipt`, the game-pass callbacks and player cleanup.
+	Call it once; later calls are no-ops.
 ]=]
 function Server.init(self: ServerClass)
 	if self._initialized then
@@ -182,16 +182,16 @@ function Server.getUserSubscriptionPaymentHistory(
 end
 
 --[=[
-	Provides cross-server receipt de-duplication. Without a recorder, the
-	server only remembers purchases processed in the current session.
+	Lets you de-dupe receipts across servers. With no recorder set, the server
+	only remembers purchases it handled this session.
 ]=]
 function Server.setPurchaseRecorder(self: ServerClass, recorder: PurchaseRecorder?)
 	self._recorder = recorder
 end
 
 --[=[
-	Registers a handler for a developer product. The handler must return
-	`true` only once the grant is safely persisted.
+	Registers a handler for a dev product. Only return `true` from the handler
+	once the grant is actually saved.
 ]=]
 function Server.registerProduct(self: ServerClass, productId: number, handler: ProductHandler)
 	assert(type(productId) == "number", "[Monetization.Server] productId must be a number")
@@ -227,7 +227,7 @@ end
 
 --[=[
 	Runs handlers for every registered game pass the player already owns.
-	Also runs automatically on `Players.PlayerAdded`.
+	Fires automatically on `Players.PlayerAdded` too.
 ]=]
 function Server.grantRegisteredGamePassesForPlayer(self: ServerClass, player: Player)
 	for gamePassId in self._gamePassHandlers do
@@ -257,7 +257,7 @@ end
 function Server._processReceipt(self: any, receipt: ReceiptInfo): Enum.ProductPurchaseDecision
 	local player = Players:GetPlayerByUserId(receipt.PlayerId)
 	if not player then
-		-- Player left mid-purchase; let Roblox retry when they return.
+		-- Player left mid-purchase; Roblox will retry when they come back
 		return Enum.ProductPurchaseDecision.NotProcessedYet
 	end
 
@@ -287,8 +287,8 @@ function Server._processReceipt(self: any, receipt: ReceiptInfo): Enum.ProductPu
 end
 
 --[=[
-	Returns whether `player` owns `gamePassId`, caching the (network) result
-	for the lifetime of their session.
+	Does `player` own `gamePassId`? Caches the network result for the rest of
+	their session.
 ]=]
 function Server.ownsGamePass(self: ServerClass, player: Player, gamePassId: number): boolean
 	local cache = self._gamePassCache[player]

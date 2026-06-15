@@ -2,10 +2,10 @@
 --[=[
 	@module Types
 	Functional utility types: `Option<T>`, `Result<T, E>`, and tagged-union
-	helpers. These are POD tables (no metatables) so they replicate cleanly
-	through RemoteEvents and serialize through JSON.
+	helpers. These are plain tables (no metatables), so they replicate
+	cleanly through RemoteEvents and survive a JSON round-trip.
 
-	Construct with the helpers (`Some`, `None`, `Ok`, `Err`). Inspect using
+	Build them with the helpers (`Some`, `None`, `Ok`, `Err`); inspect with
 	the `is*` predicates and the small map / unwrap utilities.
 ]=]
 
@@ -37,7 +37,7 @@ function Types.isNone<T>(opt: Option<T>): boolean
 end
 
 --[=[
-	Returns the inner value or `default` when the option is `None`.
+	Inner value, or `default` when the option is `None`
 ]=]
 function Types.unwrapOr<T>(opt: Option<T>, default: T): T
 	if opt.kind == "Some" then
@@ -47,7 +47,7 @@ function Types.unwrapOr<T>(opt: Option<T>, default: T): T
 end
 
 --[=[
-	Returns the inner value or errors with `message` when `None`.
+	Inner value, or errors with `message` when `None`
 ]=]
 function Types.expect<T>(opt: Option<T>, message: string): T
 	if opt.kind == "Some" then
@@ -111,7 +111,7 @@ function Types.mapErr<T, E, F>(r: Result<T, E>, mapper: (E) -> F): Result<T, F>
 end
 
 --[=[
-	Wraps a function call in a `Result`. Any error thrown becomes the `Err`.
+	Runs `fn` and wraps the outcome in a `Result`; anything thrown becomes the `Err`
 ]=]
 function Types.tryCall<T>(fn: () -> T): Result<T, string>
 	local ok, value = pcall(fn)
@@ -124,8 +124,8 @@ end
 -- Generic helpers
 
 --[=[
-	Asserts at runtime that `value` is non-nil. Returns it typed as
-	non-optional so downstream code can drop the `?`.
+	Asserts `value` is non-nil at runtime and hands it back typed as
+	non-optional, so downstream code can drop the `?`
 ]=]
 function Types.expectNonNil<T>(value: T?, message: string?): T
 	if value == nil then
@@ -134,7 +134,7 @@ function Types.expectNonNil<T>(value: T?, message: string?): T
 	return value :: T
 end
 
--- Reserved key for tagging the "type" of a structurally-typed table.
+-- Reserved key for tagging the "type" of a structurally-typed table
 export type Discriminant = string
 
 return Types

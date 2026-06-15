@@ -1,11 +1,10 @@
 --!nocheck
 --[=[
 	@module Loader
-	Discovers modular units (services, controllers, components), orders them
-	by dependency, calls every `Init` then spawns every `Start`, and binds
-	the per-frame hooks to `RunService`. Services run only on the server;
-	controllers only on the client; components run on whichever side
-	registers them.
+	Finds modular units (services, controllers, components), sorts them by
+	dependency, runs every `Init`, then spawns every `Start`, and wires the
+	per-frame hooks to `RunService`. Services run server-only, controllers
+	client-only; components run wherever they're registered.
 
 	Server entry point:
 	```lua
@@ -120,10 +119,11 @@ local function loadFolder(folder: Instance, handler: (any, ModuleScript) -> ())
 end
 
 --[=[
-	Recursively require every `ModuleScript` under `folder` and register
-	every returned table. Plain tables are auto-stamped as services,
-	controllers, or components depending on which `Add*` API was used.
-	Already-stamped tables (e.g. from `CreateDataService`) pass through.
+	Require every `ModuleScript` under `folder` (recursively) and register
+	whatever table it returns. Plain tables get stamped as services,
+	controllers, or components based on which `Add*` API you used. Tables
+	that are already stamped (e.g. from `CreateDataService`) pass straight
+	through.
 ]=]
 function Loader.AddIn(folder: Instance)
 	loadFolder(folder, function(value, moduleScript)
@@ -171,11 +171,11 @@ end
 --[=[
 	String-keyed lookup for a registered service. Prefer
 	`require(path.to.Service)` for fully-typed access - every framework
-	unit module returns its typed singleton. Use this only for dynamic
-	cases (introspection, debug tools, plugin code).
+	unit module returns its typed singleton. Use this only when you have to
+	be dynamic (introspection, debug tools, plugin code).
 
-	Generic `T` lets callers annotate the receiver if they want a cast
-	without `::`. Example:
+	Generic `T` lets you annotate the receiver for a cast without `::`.
+	Example:
 	```lua
 	local Data: DataServiceModule.Class = Framework.GetService("DataService")
 	```
@@ -187,8 +187,8 @@ function Loader.GetService<T>(name: string): T
 end
 
 --[=[
-	String-keyed lookup for a registered controller - see `GetService`
-	for the recommended typed alternative (`require(...)` directly).
+	String-keyed lookup for a registered controller - see `GetService` for
+	the typed alternative we'd rather you use (`require(...)` directly).
 ]=]
 function Loader.GetController<T>(name: string): T
 	local c = state.controllers[name]
@@ -197,8 +197,8 @@ function Loader.GetController<T>(name: string): T
 end
 
 --[=[
-	String-keyed lookup for a component *definition* table - prefer a
-	direct `require` of the component module.
+	String-keyed lookup for a component *definition* table - prefer a direct
+	`require` of the component module.
 ]=]
 function Loader.GetComponent<T>(name: string): T
 	local c = state.components[name]
@@ -207,9 +207,9 @@ function Loader.GetComponent<T>(name: string): T
 end
 
 --[=[
-	Returns the per-instance component table for a specific `Instance`,
-	or `nil` if that instance is not currently mounted. Generic in `T`:
-	annotate with the component's `Class` type to get autocomplete.
+	Returns the per-instance component table for a specific `Instance`, or
+	`nil` if it isn't mounted right now. Generic in `T`: annotate with the
+	component's `Class` type for autocomplete.
 
 	```lua
 	local plot: PlotModule.Class? = Framework.GetComponentInstance("Plot", model)
@@ -224,8 +224,8 @@ function Loader.GetComponentInstance<T>(name: string, instance: Instance): T?
 end
 
 --[=[
-	Returns every currently-mounted instance of the named component as
-	an array. Generic in `T`; the order is implementation-defined.
+	Returns every currently-mounted instance of the named component as an
+	array. Generic in `T`; order is undefined.
 ]=]
 function Loader.GetComponentInstances<T>(name: string): { T }
 	local c = state.components[name]
@@ -469,9 +469,9 @@ end
 
 
 --[=[
-	Initializes every registered service / controller in dependency order,
-	then spawns `Start` for each, binds frame hooks, and mounts every
-	tagged component. Idempotent.
+	Inits every registered service / controller in dependency order, then
+	spawns `Start` for each, binds the frame hooks, and mounts every tagged
+	component. Idempotent.
 ]=]
 function Loader.Start()
 	if state.started or state.starting then
@@ -527,8 +527,8 @@ function Loader.Start()
 end
 
 --[=[
-	Disconnects every active connection, calls `Stop` on every module and
-	unmounted component instance. Idempotent.
+	Disconnects every live connection and calls `Stop` on every module and
+	every component instance as it unmounts them. Idempotent.
 ]=]
 function Loader.Stop()
 	if not state.started then
@@ -587,8 +587,8 @@ function Loader.IsStarted(): boolean
 end
 
 --[=[
-	Subscribes `callback` to run after `Start()` finishes. If the framework
-	has already started, the callback is `task.spawn`'d immediately.
+	Runs `callback` after `Start()` finishes. If the framework already
+	started, it's `task.spawn`'d right away.
 ]=]
 function Loader.OnStart(callback: () -> ())
 	assert(type(callback) == "function", "Framework.OnStart: callback must be a function")

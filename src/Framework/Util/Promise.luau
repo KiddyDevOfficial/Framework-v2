@@ -1,9 +1,9 @@
 --!strict
 --[=[
 	@module Util.Promise
-	Minimal Promise (A+ish) - covers the 90% case without trying to
-	clone the spec verbatim. Resolutions chain on threads, so handlers
-	never block the caller.
+	Small Promise (roughly A+) - covers the common case, doesn't try to clone the
+	spec word for word. Resolutions chain on threads, so handlers never block the
+	caller.
 
 	```lua
 	Promise.new(function(resolve, reject)
@@ -174,8 +174,8 @@ function Promise:finally(callback: () -> ()): Promise<any>
 end
 
 --[=[
-	Yields the current thread until the promise settles. Returns
-	`(true, value)` on resolution or `(false, errMessage)` on rejection.
+	Yields until the promise settles. Returns `(true, value)` on resolve,
+	`(false, errMessage)` on reject.
 ]=]
 function Promise:await(): (boolean, any)
 	local s: any = self
@@ -204,8 +204,8 @@ function Promise:expect(): any
 end
 
 --[=[
-	Resolves with `{ value, ... }` once every promise resolves. Rejects
-	at the first rejection.
+	Resolves with `{ value, ... }` once they all resolve. Rejects on the first
+	rejection.
 ]=]
 function Promise.all(promises: { Promise<any> }): Promise<{ any }>
 	return new(function(res, rej)

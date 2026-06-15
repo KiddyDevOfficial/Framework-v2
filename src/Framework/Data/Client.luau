@@ -1,13 +1,13 @@
 --!strict
 --[=[
 	@module Data.Client
-	Client-side singleton. Subscribes to the framework's replication
+	Client side singleton. Listens on the framework's replication
 	`RemoteEvent`, applies inbound `Init` / `Set` / `ArrayInsert` /
-	`ArrayRemove` actions to a local `Data` mirror, and exposes the
-	same reactive read / signal API as the server.
+	`ArrayRemove` actions to a local `Data` mirror, and exposes the same
+	reactive read / signal API as the server.
 
-	`init` yields until the server replies with the initial snapshot,
-	which is why the framework adapter runs it in `Start`.
+	`init` yields until the server sends the initial snapshot, which is
+	why the framework adapter runs it in `Start`.
 ]=]
 
 local RunService = game:GetService("RunService")
@@ -58,12 +58,12 @@ local function applyAction(self: any, action: number, ...: any)
 end
 
 --[=[
-	Connects replication listeners. Non-yielding: the remotes are resolved
-	in a background thread (`Networking.buildClient` waits on `WaitForChild`)
-	so this is safe to call from `DataController:Init`, which must not yield.
-	Calling it early ensures an `Init` event fired while the server was
-	booting is not missed; any gap is covered by the `Fetch` fallback in
-	`waitForData`.
+	Hooks up the replication listeners. Doesn't yield - the remotes get
+	resolved on a background thread (`Networking.buildClient` waits on
+	`WaitForChild`), so it's fine to call from `DataController:Init`, which
+	can't yield. Binding early means we don't miss an `Init` fired while the
+	server was still booting; anything we do miss is covered by the `Fetch`
+	fallback in `waitForData`.
 ]=]
 function Client.bind(self: any)
 	if self._bound then
@@ -100,9 +100,9 @@ local function tryFetchSnapshot(self: any): boolean
 end
 
 --[=[
-	Yields until the initial snapshot is available. Safe to call more than
-	once. Pulls via `Fetch` when the server already sent `Init` before this
-	client subscribed (normal in Studio / server-first boot order).
+	Yields until the initial snapshot shows up. Fine to call more than once.
+	Falls back to a `Fetch` pull if the server already sent `Init` before we
+	subscribed (happens in Studio / server-first boot order).
 ]=]
 function Client.init(self: any)
 	if self._initialized then

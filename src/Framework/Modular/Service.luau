@@ -1,9 +1,9 @@
 --!strict
 --[=[
 	@module Service
-	Server-side singleton modules. A service is just a table with optional
-	lifecycle methods. No classes, no inheritance - `self` inside every
-	hook is the service table itself.
+	Server-side singleton modules. A service is just a table with some
+	optional lifecycle methods. No classes, no inheritance - `self` inside
+	every hook is the service table itself.
 
 	```lua
 	-- src/server/Services/PlayerService.luau
@@ -25,9 +25,9 @@
 	return PlayerService
 	```
 
-	`Name` defaults to the `ModuleScript` name when omitted. The Loader
-	stamps and registers the table when scanning a `Services` folder.
-	`Framework.CreateService` remains available for manual registration.
+	`Name` falls back to the `ModuleScript` name when omitted. The Loader
+	stamps and registers the table when it scans a `Services` folder, and
+	`Framework.CreateService` is still there for manual registration.
 ]=]
 
 local Symbol = require(script.Parent.Parent.Symbol)
@@ -52,9 +52,9 @@ export type ServiceDef = {
 } & Hooks
 
 --[=[
-	Stamps `def` as a service in place and returns the very same table.
-	Keeping the user's literal table preserves `typeof(def)` so methods
-	added afterwards (`function MyService:Init()`) flow into the type.
+	Stamps `def` as a service in place and returns the same table. Keeping
+	your literal table keeps `typeof(def)` intact, so methods you add later
+	(`function MyService:Init()`) flow into the type.
 ]=]
 function Service.Create<T>(def: T & Definition): T
 	local d: any = def
@@ -83,9 +83,9 @@ function Service.Create<T>(def: T & Definition): T
 end
 
 --[=[
-	Stamps a plain module table as a service. If `moduleScript` is given and
-	`Name` is missing, it defaults to the `ModuleScript` name. Already-
-	stamped tables pass through unchanged. Used by the Loader when scanning
+	Stamps a plain module table as a service. With `moduleScript` given and
+	`Name` missing, `Name` falls back to the `ModuleScript` name. Already-
+	stamped tables pass through untouched. The Loader uses this when scanning
 	`Services` folders.
 ]=]
 function Service.Prepare(value: any, moduleScript: ModuleScript?): any

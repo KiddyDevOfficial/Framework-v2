@@ -1,8 +1,8 @@
 --!strict
 --[=[
 	@module Util.Timer
-	Interval timer with `Tick` Signal and start/stop/destroy. Designed
-	to be stored in a Trove for automatic cleanup.
+	Interval timer with a `Tick` Signal and start/stop/destroy. Drop it in a
+	Trove for cleanup.
 
 	```lua
 	local timer = Timer.new(1)

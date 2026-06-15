@@ -1,17 +1,17 @@
 --!strict
 --[=[
 	@module Networking.Manager
-	Owns the ReplicatedStorage folder where every Bank parks its remotes.
+	Owns the ReplicatedStorage folder every Bank parks its remotes in.
 	Runtime Instance names are deterministic obfuscations of the logical
-	bank / packet names. Server lazily creates folders / remotes; client
+	bank / packet names. Server creates folders / remotes lazily; client
 	`WaitForChild`s them.
 
-	The seed MUST resolve identically on the server and every client,
-	otherwise the obfuscated names diverge and the client `WaitForChild`s
-	a remote the server never created. `game.JobId` is unsuitable: it is
-	only populated on the server (clients read an empty string in live
-	games), so the seed is derived from `game.GameId` / `game.PlaceId`,
-	which replicate consistently to both data models.
+	The seed has to resolve to the same thing on the server and every
+	client, or the obfuscated names diverge and the client `WaitForChild`s
+	a remote the server never made. Can't use `game.JobId` here - it's only
+	set on the server (clients read an empty string in live games), so we
+	derive the seed from `game.GameId` / `game.PlaceId`, which replicate the
+	same to both data models.
 ]=]
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")

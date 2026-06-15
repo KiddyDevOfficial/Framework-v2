@@ -1,21 +1,21 @@
 --!strict
 --[=[
 	@module Data.Data
-	Per-player reactive data tree. Wraps a plain JSON-compatible Luau
-	table and exposes path-based read/write operations plus four
-	families of signals fired when the underlying data mutates:
+	Per-player reactive data tree. Wraps a plain JSON-compatible Luau table
+	and gives you path-based read/write plus four kinds of signals that fire
+	when the data underneath changes:
 
-	  * `changed`         - fires when the exact value at a path changes.
-	  * `indexChanged`    - fires when any direct child of a path changes.
-	  * `arrayInserted`   - fires when a value is `arrayInsert`-ed.
-	  * `arrayRemoved`    - fires when a value is `arrayRemove`-d.
+	  * `changed`         - the exact value at a path changed
+	  * `indexChanged`    - a direct child of a path changed
+	  * `arrayInserted`   - a value was `arrayInsert`-ed
+	  * `arrayRemoved`    - a value was `arrayRemove`-d
 
-	Paths can be supplied either as a flat string (`"currency"`) or as a
-	`{ string | number }` array (`{ "tutorial", "step" }`). The latter
-	form supports nested access and array indexing.
-  
-	All signals are built from `Framework.Signal`, so listeners use the
-	framework's lowercase API:
+	A path is either a flat string (`"currency"`) or a `{ string | number }`
+	array (`{ "tutorial", "step" }`). The array form handles nesting and
+	array indexing.
+
+	Signals come from `Framework.Signal`, so listeners use the framework's
+	lowercase API:
 
 	```lua
 	data:getChangedSignal("currency"):connect(function(new, old) ... end)

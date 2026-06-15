@@ -1,8 +1,8 @@
 --!strict
 --[=[
 	@module Util
-	Aggregator for framework utility modules. Either grab the bundle
-	(`Framework.Util.TableUtil.deepCopy(...)`) or pull one directly off
+	Bundles up the framework utility modules. Grab the bundle
+	(`Framework.Util.TableUtil.deepCopy(...)`) or pull one straight off
 	`Framework` (`Framework.TableUtil.deepCopy(...)`).
 ]=]
 

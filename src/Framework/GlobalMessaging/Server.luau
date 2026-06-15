@@ -4,7 +4,7 @@
 	Server singleton for [MessagingService] subscribe / publish.
 	https://create.roblox.com/docs/reference/engine/classes/MessagingService
 
-	Low-level API uses relative topic keys (`BankName_EventName`). Prefer
+	Low-level API takes relative topic keys (`BankName_EventName`). Prefer
 	typed banks via `GlobalMessaging.Bank` in shared modules.
 ]=]
 

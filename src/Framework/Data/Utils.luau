@@ -2,9 +2,9 @@
 --[=[
 	@module Data.Utils
 	Wire-protocol enums and small shared helpers used by both `Server` and
-	`Client`. The numeric `Action` values are what travel over the
-	replication `RemoteEvent`, so they MUST stay in sync between the two
-	sides - never reorder them.
+	`Client`. The numeric `Action` values are what actually go over the
+	replication `RemoteEvent`, so both sides have to agree on them - never
+	reorder them.
 ]=]
 
 local Utils = {}

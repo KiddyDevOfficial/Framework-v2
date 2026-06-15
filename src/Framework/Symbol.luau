@@ -1,11 +1,11 @@
 --!strict
 --[=[
 	@module Symbol
-	Opaque, comparable identifiers. Two symbols created with the same name
-	are NOT equal unless created via `Symbol.named` (which is interned).
+	Opaque, comparable identifiers. Two symbols with the same name are NOT equal
+	unless you make them with `Symbol.named` (those are interned).
 
-	Useful for:
-	  * Private keys on tables (no string collision).
+	Good for:
+	  * Private table keys (no string collisions).
 	  * Sentinels (NONE, MISSING, ANY, ...).
 	  * Tagged unions / discriminators.
 ]=]
@@ -24,8 +24,8 @@ export type Symbol = typeof(setmetatable(
 local intern: { [string]: Symbol } = {}
 
 --[=[
-	Returns a globally-interned symbol. Calling `Symbol.named("X")` twice
-	returns the exact same symbol (referentially equal).
+	A globally-interned symbol. `Symbol.named("X")` twice gives you the same
+	symbol back (referentially equal).
 ]=]
 function Symbol.named(name: string): Symbol
 	local cached = intern[name]
@@ -41,8 +41,8 @@ function Symbol.named(name: string): Symbol
 end
 
 --[=[
-	Returns a brand-new symbol every call, even if the name matches another.
-	Use when you want a private, untforgeable token.
+	A brand-new symbol every call, even if the name matches another. Use it when
+	you want a private, unforgeable token.
 ]=]
 function Symbol.unique(name: string): Symbol
 	return setmetatable({

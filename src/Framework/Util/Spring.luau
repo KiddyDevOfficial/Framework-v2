@@ -1,13 +1,13 @@
 --!strict
 --[=[
 	@module Util.Spring
-	Physics-based spring interpolation - the natural alternative to fixed
-	tweens for camera follow, UI bounce, recoil, and smooth value chasing.
-	Drive it from a `Heartbeat` / `RenderStep` hook by calling `:step(dt)`.
+	Spring interpolation - use it instead of fixed tweens for camera follow,
+	UI bounce, recoil, anything that chases a value. Drive it from a
+	`Heartbeat` / `RenderStep` hook by calling `:step(dt)`.
 
-	The integrator is the unconditionally stable semi-implicit damped
-	harmonic oscillator (Allen Chou), so large `dt` spikes never explode.
-	Works on `number`, `Vector2`, and `Vector3` targets.
+	The integrator is the semi-implicit damped harmonic oscillator (Allen
+	Chou) - unconditionally stable, so big `dt` spikes won't blow up. Works
+	on `number`, `Vector2`, and `Vector3` targets.
 
 	* `frequency`     - oscillations per second; higher = snappier.
 	* `dampingRatio`  - `1` critically damped (no overshoot), `<1`
@@ -65,9 +65,9 @@ local function magnitude(value: any): number
 end
 
 --[=[
-	Creates a spring resting at `initial`. `frequency` defaults to `4`
-	and `dampingRatio` to `1` (critically damped). The value type is
-	inferred from `initial` and must be a `number`, `Vector2`, or `Vector3`.
+	New spring resting at `initial`. `frequency` defaults to `4`, `dampingRatio`
+	to `1` (critically damped). Value type comes from `initial` - must be a
+	`number`, `Vector2`, or `Vector3`.
 ]=]
 function Spring.new<T>(initial: T, frequency: number?, dampingRatio: number?): Spring<T>
 	local zero: any = initial

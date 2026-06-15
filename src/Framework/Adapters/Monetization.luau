@@ -1,10 +1,10 @@
 --!strict
 --[=[
 	@module Adapters.Monetization
-	Framework bindings for the built-in Monetization subsystem. Exposes:
+	Framework bindings for the built-in Monetization subsystem:
 
 	  * `Monetization.CreateService(options)` - server `Service` that boots
-	    `Monetization.server` in `Init` and forwards the API in PascalCase.
+	    `Monetization.server` in `Init` and re-exposes the API in PascalCase.
 	  * `Monetization.CreateController(options)` - client `Controller` that
 	    boots `Monetization.client` in `Start`.
 

@@ -1,9 +1,9 @@
 --!strict
 --[=[
 	@module Util.Observer
-	A typed observable value (the observer pattern). Holds a single value,
-	notifies subscribers when it changes, and can replay the current value
-	to new subscribers on connect. Plays nicely with `Trove` for cleanup.
+	A typed observable value. Holds one value, fires when it changes, and
+	can replay the current value to new subscribers on connect. Drop the
+	returned connection into a `Trove` if you want it cleaned up for you.
 
 	```lua
 	local coins = Observer.new(0)
@@ -31,23 +31,23 @@ local Observer = {}
 Observer.__index = Observer
 
 export type Observer<T> = {
-	-- Fired after the value changes: `(new, old)`.
+	-- Fires after the value changes -- (new, old)
 	Changed: Signal<T, T>,
 	get: (self: Observer<T>) -> T,
 	set: (self: Observer<T>, value: T) -> boolean,
 	update: (self: Observer<T>, transform: (current: T) -> T) -> boolean,
-	-- Subscribes and fires `callback(current, current)` immediately.
+	-- Subscribe and fire callback(current, current) right away
 	observe: (self: Observer<T>, callback: (new: T, old: T) -> ()) -> Connection,
-	-- Subscribes without the immediate replay.
+	-- Subscribe without the immediate replay
 	subscribe: (self: Observer<T>, callback: (new: T, old: T) -> ()) -> Connection,
 	isDestroyed: (self: Observer<T>) -> boolean,
 	destroy: (self: Observer<T>) -> (),
 }
 
 --[=[
-	Creates an observable seeded with `initialValue`. The optional
-	`equals` predicate decides whether `set` counts as a change (defaults
-	to `==`); supply one for tables you want compared by content.
+	New observable seeded with `initialValue`. The optional `equals`
+	predicate decides what counts as a change (defaults to `==`) -- pass
+	one in when you're holding a table and want it compared by content.
 ]=]
 function Observer.new<T>(initialValue: T, equals: ((a: T, b: T) -> boolean)?): Observer<T>
 	local self = setmetatable({
@@ -71,8 +71,8 @@ local function isEqual(s: any, a: any, b: any): boolean
 end
 
 --[=[
-	Assigns `value`, firing `Changed` if it differs from the current value.
-	Returns `true` when a change was emitted.
+	Assigns `value` and fires `Changed` if it actually differs from what
+	was there. Returns `true` when a change went out.
 ]=]
 function Observer.set<T>(self: Observer<T>, value: T): boolean
 	local s: any = self
@@ -87,7 +87,7 @@ function Observer.set<T>(self: Observer<T>, value: T): boolean
 end
 
 --[=[
-	Computes the next value from the current one via `transform`.
+	Like `set`, but derives the next value from the current one.
 ]=]
 function Observer.update<T>(self: Observer<T>, transform: (current: T) -> T): boolean
 	local s: any = self
@@ -98,7 +98,7 @@ function Observer.observe<T>(self: Observer<T>, callback: (new: T, old: T) -> ()
 	local s: any = self
 	assert(not s._destroyed, "[Observer] cannot observe a destroyed observer")
 	local conn = s.Changed:connect(callback)
-	-- Replay current value synchronously so subscribers start in sync.
+	-- Replay the current value now so the subscriber starts in sync
 	callback(s._value, s._value)
 	return conn
 end

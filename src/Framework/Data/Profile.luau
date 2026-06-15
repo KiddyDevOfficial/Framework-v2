@@ -48,8 +48,8 @@ export type Profile = typeof(setmetatable(
 	Profile
 ))
 
--- ProfileStore is server-only and self-initialises a Heartbeat/BindToClose
--- loop on require, so pull it in lazily from the server-only `openStore`.
+-- ProfileStore is server-only and kicks off a Heartbeat/BindToClose loop
+-- the moment you require it, so we pull it in lazily from `openStore`.
 local ProfileStore: any = nil
 
 local function requireProfileStore(): any
@@ -71,9 +71,9 @@ local function deepCopy(value: any): any
 end
 
 -- `ProfileStore.Mock` mirrors every store method against an in-memory
--- DataStore, which is what we want when `useMock` is set (Studio with API
--- services disabled). Note its `StartSessionAsync` ignores the params table,
--- but mock sessions never conflict so the `Cancel` guard is real-store only.
+-- DataStore - that's what we want when `useMock` is on (Studio with API
+-- services off). Its `StartSessionAsync` ignores the params table, but mock
+-- sessions never conflict anyway, so the `Cancel` guard is real-store only.
 local function realmOf(store: Store): any
 	return if store._useMock then store._ps.Mock else store._ps
 end
@@ -103,8 +103,8 @@ local function wrap(psProfile: any, isView: boolean, template: any): Profile
 end
 
 --[=[
-	Builds a ProfileStore for `name`. The template is bound at store-creation
-	time because ProfileStore reconciles `Profile.Data` against it.
+	Opens a ProfileStore for `name`. The template is bound here at creation
+	time since ProfileStore reconciles `Profile.Data` against it.
 ]=]
 function Profile.openStore(name: string, useMock: boolean, template: any): Store
 	assert(RunService:IsServer(), "DataService.Profile can only open a store on the server")
@@ -120,11 +120,11 @@ end
 	Starts a ProfileStore session (`mode == "session"`) or loads a read-only
 	snapshot (`mode == "view"`).
 
-	  * Session mode returns `nil` only when the session could not be started
+	  * Session mode returns `nil` only if the session couldn't be started
 	    (e.g. the `cancel` guard fired because the player already left).
-	  * View mode never blocks another server and never saves; if the key has
-	    no saved data yet it hands back an in-memory, template-shaped snapshot
-	    so callers still get a usable (but non-persistent) `Data` table.
+	  * View mode never blocks another server and never saves. If the key has
+	    nothing saved yet you still get back an in-memory, template-shaped
+	    snapshot, so callers always have a usable (non-persistent) `Data` table.
 ]=]
 function Profile.load(
 	store: Store,
@@ -166,8 +166,8 @@ function Profile.removeKey(store: Store, key: string)
 end
 
 --[=[
-	Posts a message to the profile under `key` via ProfileStore's cross-server
-	message queue. Delivered to handlers registered with `:setMessageHandler`.
+	Posts a message to the profile under `key` through ProfileStore's
+	cross-server queue. Picked up by handlers from `:setMessageHandler`.
 ]=]
 function Profile.sendMessage(store: Store, key: string, message: any): boolean
 	local realm = realmOf(store)
@@ -181,7 +181,7 @@ function Profile.sendMessage(store: Store, key: string, message: any): boolean
 	return result == true
 end
 
--- ── Per-profile surface consumed by Data.Server ────────────────────────────
+----- Per-profile surface consumed by Data.Server -----
 
 function Profile.AddUserId(self: Profile, userId: number)
 	if self._profile then
@@ -192,7 +192,7 @@ end
 function Profile.Reconcile(self: Profile)
 	if self._profile then
 		self._profile:Reconcile()
-		-- Reconcile mutates Data in place; refresh our cached reference anyway.
+		-- Reconcile mutates Data in place, but refresh our cached reference anyway
 		self.Data = self._profile.Data
 	end
 end
@@ -205,8 +205,8 @@ function Profile.EndSession(self: Profile)
 end
 
 --[=[
-	Registers a ProfileStore message handler. `fn(message, processed)` is
-	called for each queued/incoming message; call `processed()` to consume it.
+	Registers a ProfileStore message handler. `fn(message, processed)` runs
+	for each queued/incoming message - call `processed()` to consume it.
 ]=]
 function Profile.setMessageHandler(self: Profile, fn: (message: any, processed: () -> ()) -> ())
 	if self._isView or not self._profile then

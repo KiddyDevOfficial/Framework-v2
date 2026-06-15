@@ -1,16 +1,16 @@
 --!strict
 --[=[
 	@module Util.Cache
-	A generic in-memory cache with optional **LRU** capacity eviction and
-	optional **TTL** expiry. Reach for it to memoize expensive lookups -
-	`MarketplaceService:GetProductInfo`, group ranks, pathfinding results -
-	without leaking memory or serving stale data forever.
+	In-memory cache with optional LRU capacity eviction and optional TTL
+	expiry. Good for memoizing expensive lookups - `GetProductInfo`, group
+	ranks, pathfinding results - without leaking memory or holding onto
+	stale data forever.
 
-	* `maxSize` - once exceeded, the least-recently-used entry is evicted.
-	* `ttl`     - seconds an entry stays valid; expired entries are dropped
-	              lazily on the next access (`os.clock` based, monotonic).
+	* `maxSize` - once you go over it, the least-recently-used entry is dropped
+	* `ttl`     - seconds an entry stays valid; expired entries get dropped
+	              lazily on the next access (`os.clock` based, monotonic)
 
-	Omit both and it behaves like a plain unbounded table with a tidy API.
+	Leave both out and it's just an unbounded table with a nicer API.
 
 	```lua
 	local Cache = Framework.Cache
@@ -48,7 +48,7 @@ export type Cache<K, V> = {
 }
 
 --[=[
-	Creates a cache. With no options it is unbounded and never expires.
+	New cache. With no options it's unbounded and never expires.
 ]=]
 function Cache.new<K, V>(options: Options?): Cache<K, V>
 	local opts: Options = options or {}
@@ -71,7 +71,7 @@ local function indexOf(order: { any }, key: any): number?
 	return nil
 end
 
--- Moves `key` to the most-recently-used position (end of the order list).
+-- Bump `key` to the most-recently-used spot (end of the order list)
 local function touch(s: any, key: any)
 	local i = indexOf(s._order, key)
 	if i then
@@ -89,7 +89,7 @@ local function drop(s: any, key: any)
 	end
 end
 
--- Returns true if the entry exists and has not expired; drops it if it has.
+-- True if the entry's there and still fresh; drops it if it has expired
 local function isLive(s: any, key: any): boolean
 	if s._values[key] == nil then
 		return false

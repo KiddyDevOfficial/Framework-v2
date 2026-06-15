@@ -1,12 +1,12 @@
 --!strict
 --[=[
 	@module Util.TableUtil
-	Pure-Lua helpers that the standard `table` library doesn't ship.
-	Two flavors of merge:
-	  * `merge(a, b)`     - shallow, keys from `b` overwrite `a`.
-	  * `deepMerge(a, b)` - recursive, `b` wins on leaves.
+	Pure-Lua helpers the stock `table` library doesn't have.
+	Three ways to combine tables:
+	  * `merge(a, b)`     - shallow; keys from `b` overwrite `a`.
+	  * `deepMerge(a, b)` - recursive; `b` wins on leaves.
 	  * `reconcile(t, template)` - fills missing keys from `template`
-	    (used by DataService template reconciliation patterns).
+	    (the DataService template reconcile pattern).
 ]=]
 
 local TableUtil = {}
@@ -120,8 +120,7 @@ function TableUtil.shallowCopy<T>(t: T): T
 end
 
 --[=[
-	Recursive copy. Cycles raise an error; pass them through a
-	mutation-free transformer if you need to break them.
+	Recursive copy. Cycles raise an error.
 ]=]
 function TableUtil.deepCopy<T>(t: T): T
 	local function copy(source: any, seen: { [any]: any })
@@ -155,8 +154,8 @@ function TableUtil.merge<A, B>(a: A & { [any]: any }, b: B & { [any]: any }): A 
 end
 
 --[=[
-	Recursive merge - table values get merged, leaves overwritten. Arrays
-	(numeric-keyed contiguous tables) are replaced wholesale, not merged.
+	Recursive merge - tables get merged, leaves overwritten. Arrays
+	(contiguous numeric-keyed tables) are replaced whole, not merged.
 ]=]
 function TableUtil.deepMerge<A, B>(a: A & { [any]: any }, b: B & { [any]: any }): A & B
 	local function isArray(t: any): boolean
@@ -185,9 +184,8 @@ function TableUtil.deepMerge<A, B>(a: A & { [any]: any }, b: B & { [any]: any })
 end
 
 --[=[
-	Mutates `t` in place, filling any missing keys from `template`. Used
-	by data-template reconciliation: existing values stay untouched,
-	new template keys are populated with deep copies.
+	Mutates `t` in place, filling missing keys from `template`. The data-template
+	reconcile: existing values stay put, new template keys get deep-copied in.
 ]=]
 function TableUtil.reconcile(t: { [any]: any }, template: { [any]: any })
 	for k, v in template do

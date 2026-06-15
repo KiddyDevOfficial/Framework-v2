@@ -1,19 +1,19 @@
 --!strict
 --[=[
 	@module Data
-	Framework-native DataService with a
-	[`leifstout/dataservice`](https://github.com/leifstout/dataService)-style
-	shape (`{ server, client }`).
+	Framework-native DataService shaped like
+	[`leifstout/dataservice`](https://github.com/leifstout/dataService)
+	(`{ server, client }`).
 
-	Persistence is backed by
+	Persistence runs on
 	[MadStudioRoblox/ProfileStore](https://github.com/MadStudioRoblox/ProfileStore)
-	(vendored at `./ProfileStore.luau`) through the `Profile` adapter, giving
-	session locking, periodic auto-save, template reconciliation, a Studio mock
-	and a cross-server message queue. Replication goes through a single
-	RemoteEvent + RemoteFunction managed under
+	(vendored at `./ProfileStore.luau`) through the `Profile` adapter, so you
+	get session locking, periodic auto-save, template reconciliation, a Studio
+	mock and a cross-server message queue. Replication rides a single
+	RemoteEvent + RemoteFunction under
 	`ReplicatedStorage/_FrameworkDataService`.
 
-	Most users won't touch this module directly - `Framework.CreateDataService`
+	You usually won't touch this module directly - `Framework.CreateDataService`
 	and `Framework.CreateDataController` wrap it into a Service / Controller
 	that boots in the loader's dependency order.
 

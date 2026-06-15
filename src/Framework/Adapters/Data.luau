@@ -2,21 +2,21 @@
 --[=[
 	@module Adapters.Data
 	Framework-native bindings for the built-in DataService
-	(`src/Framework/Data/`). Exposes two factories that return
-	ready-to-register framework units:
+	(`src/Framework/Data/`). Two factories that hand back ready-to-register
+	framework units:
 
-	  * `Data.CreateService(options)`    - builds a `Framework.CreateService`
-	    table that calls `DataService.server:init(...)` in its `Init` hook.
-	  * `Data.CreateController(options)` - builds a `Framework.CreateController`
-	    table that calls `DataService.client:init()` in its `Start` hook
-	    (init yields until the server pushes the initial snapshot).
+	  * `Data.CreateService(options)`    - a `Framework.CreateService` table
+	    that calls `DataService.server:init(...)` in its `Init` hook.
+	  * `Data.CreateController(options)` - a `Framework.CreateController` table
+	    that calls `DataService.client:init()` in its `Start` hook (init yields
+	    until the server pushes the initial snapshot).
 
-	Both definitions forward the underlying API as PascalCase methods so
-	they read consistently with the rest of the framework.
+	Both forward the underlying API as PascalCase methods so they read like
+	the rest of the framework.
 
 	`CreateDataService<T>` / `CreateDataController<T>` take a template type
 	`T` (usually `DataTemplate.DataTemplate`) so `:Get` / `:Update` path
-	arguments autocomplete from your schema.
+	arguments autocomplete off your schema.
 ]=]
 
 local RunService = game:GetService("RunService")
@@ -48,14 +48,13 @@ export type ServerOptions<T = { [string]: any }> = {
 export type ClientOptions<T = { [string]: any }> = {
 	Name: string?,
 	Dependencies: { string }?,
-	-- Pass the same table as the server `Template` so `T` is inferred.
 	Template: T?,
 }
 
 --[=[
-	Public API for `Framework.CreateDataService<T>(...)`. Require your game
-	`DataService` module (which sets `T` from `DataTemplate`) for full path
-	autocomplete — not `Framework.GetService("DataService")`.
+	Public API for `Framework.CreateDataService<T>(...)`. For full path
+	autocomplete, require your game `DataService` module (the one that sets
+	`T` from `DataTemplate`); don't go through `Framework.GetService("DataService")`.
 ]=]
 export type ServerClass<T = { [string]: any }, TPath = AnyPath, TArrayPath = AnyArrayPath> = {
 	Server: (self: ServerClass<T, TPath, TArrayPath>) -> any,

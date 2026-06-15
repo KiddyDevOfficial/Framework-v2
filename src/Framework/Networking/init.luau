@@ -1,7 +1,7 @@
 --!strict
 --[=[
 	@module Networking
-	Shared typed networking layer. Packets are grouped into **Banks**;
+	Shared typed networking layer. Packets get grouped into **Banks**;
 	each packet is one of:
 	  * `Event<Args>`            - reliable `RemoteEvent`
 	  * `UnreliableEvent<Args>`  - `UnreliableRemoteEvent`
@@ -41,11 +41,10 @@
 	local snap = Net.GetSnapshot:InvokeServer(nil)
 	```
 
-	At runtime, bank folders and remotes use deterministic obfuscated
-	Instance names derived from the current server job id. Your code still
-	uses the logical bank / packet names. Server lazily creates each remote;
-	client `WaitForChild`s it the first time the bank is required, so order
-	of require is safe.
+	At runtime, bank folders and remotes get deterministic obfuscated
+	Instance names; your code still uses the logical bank / packet names.
+	Server creates each remote lazily; client `WaitForChild`s it the first
+	time the bank is required, so require order is safe.
 ]=]
 
 local Bank = require(script.Bank)

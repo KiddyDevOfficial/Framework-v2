@@ -1,8 +1,7 @@
 --!strict
 --[=[
 	@module FFlags
-	Global runtime flags synchronized across live servers through
-	`GlobalMessaging`.
+	Global runtime flags synced across live servers over `GlobalMessaging`.
 
 	```lua
 	local FFlags = require(ReplicatedStorage.Framework).FFlags.server

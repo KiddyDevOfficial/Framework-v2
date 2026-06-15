@@ -2,12 +2,12 @@
 --[=[
 	@module Util.GuiButton
 	Hover / press size tweens and optional GUI sounds for `GuiButton`
-	instances tagged `"Button"` via CollectionService.
+	instances tagged `"Button"` through CollectionService.
 
 	Studio setup:
 	  - Tag any `GuiButton` with `Button` (CollectionService tag).
-	  - Optional `SizeFactor` attribute (number, default `1.08`) overrides
-	    the hover scale multiplier for that button.
+	  - Optional `SizeFactor` attribute (number, default `1.08`) sets the
+	    hover scale for that button.
 	  - Optional `SoundService.GuiSounds` folder with `Click` and `Hover`
 	    Sound children.
 
@@ -108,8 +108,8 @@ local function tweenSize(button: GuiButton, newSize: UDim2, tweenInfo: TweenInfo
 end
 
 --[=[
-	Binds hover and click feedback to a single `GuiButton`. Returns a
-	`Trove` that disconnects listeners when `:destroy()` is called.
+	Binds hover and click feedback to one `GuiButton`. Returns a `Trove` that
+	disconnects everything on `:destroy()`.
 ]=]
 function GuiButtonUtil.bind(button: GuiButton, options: Options?): Trove.Trove
 	local opts = options or {}
@@ -227,22 +227,22 @@ local function watchTagged(
 end
 
 --[=[
-	Binds every tagged `GuiButton` descendant under `root`. Returns a trove
-	that owns every per-button trove and listens for tag changes.
+	Binds every tagged `GuiButton` under `root`. Returns a trove that owns the
+	per-button troves and watches for tag changes.
 ]=]
 function GuiButtonUtil.bindIn(root: Instance, options: Options?): Trove.Trove
 	return watchTagged(root, options)
 end
 
 --[=[
-	Binds every `GuiButton` tagged `Button` in the experience.
+	Binds every `GuiButton` tagged `Button` in the place.
 ]=]
 function GuiButtonUtil.bindTagged(options: Options?): Trove.Trove
 	return watchTagged(nil, options)
 end
 
 --[=[
-	Binds a single button, tagged descendants under a container, or every
+	Binds a single button, the tagged descendants of a container, or every
 	tagged button in an array of instances.
 ]=]
 function GuiButtonUtil.bindAny(target: GuiButton | Instance | { Instance }, options: Options?): Trove.Trove?

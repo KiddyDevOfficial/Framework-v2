@@ -1,8 +1,8 @@
 --!strict
 --[=[
 	@module FFlags.Networking
-	Private remotes used to replicate read-only FFlags snapshots and updates
-	from server to client.
+	Private remotes that push read-only FFlags snapshots and updates from the
+	server down to clients.
 ]=]
 
 local Networking = require(script.Parent.Parent.Networking)

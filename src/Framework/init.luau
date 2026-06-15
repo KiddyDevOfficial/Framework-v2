@@ -3,10 +3,10 @@
 	@module Framework
 	Type-first, modular framework for Roblox/Luau. No classes, no
 	inheritance, no abstract methods - just tables with `:Init` / `:Start`
-	style methods, dependency ordering, and a CollectionService-driven
-	component runtime.
+	methods, dependency ordering, and a CollectionService-driven component
+	runtime.
 
-	Pillars:
+	The pieces:
 	  * `CreateService`     - server singleton modules (`:Init`, `:Start`, ...).
 	  * `CreateController`  - client singleton modules.
 	  * `CreateComponent`   - per-`Instance` modules bound by tag.
@@ -32,9 +32,9 @@
 	                          `StateMachine`, `GuiButton` (also re-exported
 	                          at top level).
 
-	Typed fetch pattern (canonical): every framework unit module already
-	returns its typed singleton, so just `require` it directly - no
-	`Framework.GetService(name)` annotation needed.
+	Fetching a unit: every framework module already returns its typed
+	singleton, so just `require` it directly - no `Framework.GetService(name)`
+	annotation needed.
 
 	```lua
 	local DataService = require(ServerScriptService.Server.Services.DataService)

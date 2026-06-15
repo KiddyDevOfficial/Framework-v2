@@ -1,7 +1,7 @@
 --!strict
 --[=[
 	@module FFlags.Types
-	Types for global runtime flags synchronized across live servers through
+	Types for the global runtime flags we sync across live servers over
 	`GlobalMessaging`.
 ]=]
 

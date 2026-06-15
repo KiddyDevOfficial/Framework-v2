@@ -1,10 +1,10 @@
 --!strict
 --[=[
 	@module Modular
-	Aggregates the modular subsystem (`Service`, `Controller`, `Component`,
-	`Loader`, `Lifecycle`) into a single ergonomic façade. The parent
-	`Framework` module re-exports these helpers as flat top-level functions
-	so most callers never need to touch `Framework.Modular` directly.
+	Pulls the modular subsystem (`Service`, `Controller`, `Component`,
+	`Loader`, `Lifecycle`) together behind one façade. The parent `Framework`
+	module re-exports these as flat top-level functions, so most callers never
+	touch `Framework.Modular` directly.
 ]=]
 
 local Service = require(script.Service)

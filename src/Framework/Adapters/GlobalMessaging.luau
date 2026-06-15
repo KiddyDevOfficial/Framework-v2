@@ -1,7 +1,7 @@
 --!strict
 --[=[
 	@module Adapters.GlobalMessaging
-	Framework service binding for cross-server [MessagingService].
+	Wires the cross-server [MessagingService] package into a framework service.
 	https://create.roblox.com/docs/reference/engine/classes/MessagingService
 
 	```lua

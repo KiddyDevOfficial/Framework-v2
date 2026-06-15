@@ -1,10 +1,10 @@
 --!strict
 --[=[
 	@module FFlags.Server
-	Global runtime flags shared between live servers through `GlobalMessaging`.
+	Global runtime flags shared between live servers over `GlobalMessaging`.
 
-	Flags are intentionally lightweight and non-persistent. Use them for live
-	toggles and short-lived shared values; store long-term config elsewhere.
+	Flags are deliberately lightweight and not persisted. Good for live toggles
+	and short-lived shared values; put long-term config somewhere else.
 ]=]
 
 local RunService = game:GetService("RunService")

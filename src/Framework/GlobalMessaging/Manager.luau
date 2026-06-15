@@ -1,8 +1,8 @@
 --!strict
 --[=[
 	@module GlobalMessaging.Manager
-	Resolves bank/event names into MessagingService topic strings and
-	holds the experience-wide topic prefix (set by `Server.init`).
+	Turns bank/event names into MessagingService topic strings and holds
+	the experience-wide topic prefix (set by `Server.init`).
 ]=]
 
 local Manager = {}

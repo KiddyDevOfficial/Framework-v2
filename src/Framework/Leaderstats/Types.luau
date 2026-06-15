@@ -1,17 +1,17 @@
 --!strict
 --[=[
 	@module Leaderstats.Types
-	Types for syncing DataService values into player leaderstats.
+	Types for piping DataService values into player leaderstats.
 ]=]
 
 export type ValueClass = "IntValue" | "NumberValue" | "StringValue"
 
 export type Entry = {
-	-- DataService path (`"currency"`, `{ "settings", "musicVolume" }`, …).
+	-- DataService path (`"currency"`, `{ "settings", "musicVolume" }`, ...)
 	Path: string | { string | number },
-	-- Instance name under the player's leaderstats folder.
+	-- Instance name under the player's leaderstats folder
 	Name: string,
-	-- Defaults to IntValue / NumberValue / StringValue from the current value.
+	-- Left out? We pick IntValue / NumberValue / StringValue from the current value
 	Class: ValueClass?,
 }
 

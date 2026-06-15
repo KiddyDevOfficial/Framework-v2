@@ -4,7 +4,7 @@
 	Cross-server messaging over Roblox [MessagingService] (server-only).
 	https://create.roblox.com/docs/reference/engine/classes/MessagingService
 
-	**Banks** (recommended — mirrors `Networking.Bank`):
+	**Banks** (recommended; mirrors `Networking.Bank`):
 
 	```lua
 	-- src/shared/Messaging/ExampleGlobalNet.luau
@@ -24,7 +24,7 @@
 	Net.Gift:Publish({ userId = 123, amount = 50 })
 	```
 
-	Low-level API (`GlobalMessaging.server`) remains available for ad-hoc topics.
+	Low-level API (`GlobalMessaging.server`) is still there for ad-hoc topics.
 ]=]
 
 local Server = require(script.Server)

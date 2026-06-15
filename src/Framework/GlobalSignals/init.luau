@@ -1,12 +1,12 @@
 --!strict
 --[=[
 	@module GlobalSignals
-	Shared in-process signal registry with bank support. Use this when
-	multiple scripts in the same server/client VM need to publish and listen
-	to lightweight Lua events without wiring object references around.
+	Shared in-process signal registry with bank support. Use it when several
+	scripts in the same server/client VM need to publish and listen to
+	lightweight Lua events without passing object references around.
 
-	For client/server remotes, use `Framework.Networking`. For cross-server
-	MessagingService, use `Framework.GlobalMessaging`.
+	For client/server remotes use `Framework.Networking`; for cross-server
+	MessagingService use `Framework.GlobalMessaging`.
 
 	```lua
 	local GlobalSignals = require(ReplicatedStorage.Framework).GlobalSignals
@@ -31,7 +31,7 @@ local GlobalSignals = {}
 GlobalSignals.Bank = Bank.new
 
 --[=[
-	Shortcut for `GlobalSignals.Bank("_Default"):Signal(name)`.
+	Shortcut for `GlobalSignals.Bank("_Default"):Signal(name)`
 ]=]
 function GlobalSignals.Signal<T...>(name: string): GlobalSignal.GlobalSignal<T...>
 	return Bank.new(DEFAULT_BANK):Signal(name)

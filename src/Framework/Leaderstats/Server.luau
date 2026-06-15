@@ -1,7 +1,7 @@
 --!strict
 --[=[
 	@module Leaderstats.Server
-	Creates and keeps player leaderstats in sync with `DataService` paths.
+	Builds player leaderstats and keeps them in sync with `DataService` paths.
 ]=]
 
 local Players = game:GetService("Players")

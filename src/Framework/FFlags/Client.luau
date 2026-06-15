@@ -1,8 +1,8 @@
 --!strict
 --[=[
 	@module FFlags.Client
-	Read-only client cache for global runtime flags. The server owns all writes;
-	clients receive an initial snapshot and incremental updates.
+	Read-only client cache of the global runtime flags. The server owns every
+	write; clients get an initial snapshot and then incremental updates.
 ]=]
 
 local RunService = game:GetService("RunService")

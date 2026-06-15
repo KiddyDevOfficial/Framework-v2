@@ -3,17 +3,16 @@
 	@module Data.Networking
 	Tiny RemoteEvent / RemoteFunction broker for the framework DataService.
 
-	The server creates a `Folder` (`_FrameworkDataService`) under
-	`ReplicatedStorage` containing:
+	The server drops a `Folder` (`_FrameworkDataService`) under
+	`ReplicatedStorage` holding:
 
-	  * `Replicate` - `RemoteEvent`, server → client snapshot + mutation
+	  * `Replicate` - `RemoteEvent`, server -> client snapshot + mutation
 	    actions (see `Data.Utils.Action`).
-	  * `Fetch`     - `RemoteFunction`, client → server pull (used by
+	  * `Fetch`     - `RemoteFunction`, client -> server pull (used by
 	    `Client:fetch(path)`).
 
-	Both sides resolve the same instances by name; the client uses
-	`WaitForChild` so it is safe to call before the server has finished
-	`StarterPlayer.CharacterAdded` setup.
+	Both sides look the instances up by name; the client uses `WaitForChild`
+	so it's safe to call before the server has finished setting things up.
 ]=]
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -41,7 +40,7 @@ local function ensureChild<T>(parent: Instance, name: string, className: string)
 end
 
 --[=[
-	Creates the network plumbing. Server-only.
+	Builds the network plumbing. Server only.
 	Returns `(replicateEvent, fetchFunction)`.
 ]=]
 function Networking.buildServer(): (RemoteEvent, RemoteFunction)
@@ -54,7 +53,7 @@ function Networking.buildServer(): (RemoteEvent, RemoteFunction)
 end
 
 --[=[
-	Resolves the plumbing on the client (yields until it exists).
+	Resolves the plumbing on the client; yields until it's there.
 	Returns `(replicateEvent, fetchFunction)`.
 ]=]
 function Networking.buildClient(): (RemoteEvent, RemoteFunction)

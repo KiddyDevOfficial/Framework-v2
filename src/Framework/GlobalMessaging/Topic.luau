@@ -1,9 +1,9 @@
 --!strict
 --[=[
 	@module GlobalMessaging.Topic
-	Typed cross-server topic (one MessagingService subscription). Declare as
-	`GlobalMessaging.Topic<MyArgs>` on a bank packet for typed
-	`:Publish` / `:Subscribe` / `:OnMessage`.
+	Typed cross-server topic (one MessagingService subscription). Declare a
+	bank packet as `GlobalMessaging.Topic<MyArgs>` for typed `:Publish`,
+	`:Subscribe`, and `:OnMessage`.
 ]=]
 
 local RunService = game:GetService("RunService")

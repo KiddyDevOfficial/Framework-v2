@@ -1,7 +1,7 @@
 --!strict
 --[=[
 	@module Leaderstats
-	Syncs configured `DataService` paths into each player's leaderstats folder.
+	Mirrors the `DataService` paths you configure into each player's leaderstats folder.
 
 	```lua
 	local Leaderstats = require(ReplicatedStorage.Framework).Leaderstats.server
