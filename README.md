@@ -1,9 +1,47 @@
 # Goling's Framework
 
-A type-first, modular framework for Roblox / Luau — no classes, no
-inheritance, no abstract methods. Just plain tables with `:Init` / `:Start`
-style methods, dependency ordering, frame loops, and a
-CollectionService-driven component runtime.
+Goling's Framework is a type-first, modular framework for Roblox / Luau that
+streamlines the boilerplate every game ends up rewriting - service loaders,
+player-data saving, typed remotes, monetization and more - into one
+self-contained package. It runs on plain Luau with no classes, no inheritance,
+no abstract methods and no external dependencies.
+
+If you keep writing the same singleton loader and data-replication glue for
+every new game and want to skip straight to the gameplay - this can be a
+helpful resource!
+
+## How does it work?
+
+Everything you build is just a **table**. You hand the framework a table with
+`:Init` / `:Start` style methods and it wires up the lifecycle for you - no
+metatables, no inheritance, and `self` is always that same table.
+
+The **Loader** discovers your modules, sorts them by their declared
+**dependencies**, runs every `:Init` in order, spawns `:Start`, then binds the
+frame loops (`:Heartbeat`, `:Stepped`, `:RenderStep`) for as long as a module
+is alive. **Services** run on the server, **Controllers** run on the client
+with the exact same shape, and **Components** attach one table per
+CollectionService-tagged `Instance`.
+
+On top of that core sit the batteries-included subsystems - **DataService**,
+**Networking**, **Monetization**, **GlobalMessaging**, **FFlags**,
+**Leaderstats** and **GlobalSignals** - and each one folds into the same
+lifecycle through a `Create*` factory, so the rest of your code just lists it
+as a dependency. Persistent player data is backed by a vendored
+[ProfileStore](https://github.com/MadStudioRoblox/ProfileStore), so session
+locking, auto-save and template reconciliation come along for free.
+
+Much like the Roblox API itself, the public methods lean on PascalCase and
+familiar naming so they read the way you'd expect; the underlying modules also
+expose a lowercase API for advanced use.
+
+**Goling's Framework is a gameplay framework - not an ECS, and not a
+high-throughput replication engine.** It is tuned for the common case: typed
+server/client singletons, per-instance components, and player data that just
+works. If you need a full entity-component-system or custom replication, reach
+for a purpose-built library instead.
+
+The framework ships with these pieces:
 
 - **Service** — server singleton with `:Init`, `:Start`, `:Heartbeat`, …
 - **Controller** — client singleton, same shape.
@@ -1374,6 +1412,19 @@ Type-checking (requires [`luau-lsp`](https://github.com/JohnnyMorganz/luau-lsp))
 rojo sourcemap default.project.json -o sourcemap.json
 luau-lsp analyze --sourcemap=sourcemap.json --platform=roblox src
 ```
+
+---
+
+*Built and maintained by [KiddyDevOfficial](https://github.com/KiddyDevOfficial).*
+
+***See documentation:*** everything you need is in the sections above — start
+with [How does it work?](#how-does-it-work) and the [API overview](#api-overview).
+
+***Get it now on:*** Wally — `kiddydevofficial/framework` (see [Install](#install)),
+or grab a standalone `.rbxm` with `rojo build package.project.json`.
+
+Persistence is powered by [ProfileStore](https://github.com/MadStudioRoblox/ProfileStore)
+by loleris — if it saves you time, go drop them a star too.
 
 ---
 
