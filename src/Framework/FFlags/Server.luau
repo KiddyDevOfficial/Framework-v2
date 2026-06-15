@@ -80,7 +80,7 @@ function Server.init(self: ServerClass, options: InitOptions?)
 			return
 		end
 
-		if payload.Removed == true then∏
+		if payload.Removed == true then
 			self:removeLocal(payload.Name, "remote")
 		else
 			local value = payload.Value
