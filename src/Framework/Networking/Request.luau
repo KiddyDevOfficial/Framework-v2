@@ -8,6 +8,7 @@
 ]=]
 
 local Manager = require(script.Parent.Manager)
+local Stats = require(script.Parent.Stats)
 
 local Request = {}
 Request.__index = Request
@@ -32,10 +33,12 @@ function Request.new<Args, Return>(bankFolder: Folder, bankName: string, name: s
 end
 
 function Request.InvokeServer<Args, Return>(self: Request<Args, Return>, args: Args): Return
+	Stats.record(self.Bank, self.Name, "out")
 	return self._remote:InvokeServer(args) :: Return
 end
 
 function Request.InvokeClient<Args, Return>(self: Request<Args, Return>, player: Player, args: Args): Return
+	Stats.record(self.Bank, self.Name, "out")
 	return self._remote:InvokeClient(player, args) :: Return
 end
 
@@ -44,12 +47,14 @@ function Request.OnServerInvoke<Args, Return>(
 	handler: (player: Player, args: Args) -> Return
 )
 	self._remote.OnServerInvoke = function(player: Player, args: any)
+		Stats.record(self.Bank, self.Name, "in")
 		return handler(player, args :: Args)
 	end
 end
 
 function Request.OnClientInvoke<Args, Return>(self: Request<Args, Return>, handler: (args: Args) -> Return)
 	self._remote.OnClientInvoke = function(args: any)
+		Stats.record(self.Bank, self.Name, "in")
 		return handler(args :: Args)
 	end
 end

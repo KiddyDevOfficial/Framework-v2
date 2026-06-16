@@ -1,9 +1,6 @@
 --!strict
 --[=[
 	@module Util.Promise
-	Small Promise (roughly A+) - covers the common case, doesn't try to clone the
-	spec word for word. Resolutions chain on threads, so handlers never block the
-	caller.
 
 	```lua
 	Promise.new(function(resolve, reject)

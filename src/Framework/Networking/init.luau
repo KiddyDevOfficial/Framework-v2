@@ -51,14 +51,18 @@ local Bank = require(script.Bank)
 local Event = require(script.Event)
 local UnreliableEvent = require(script.UnreliableEvent)
 local Request = require(script.Request)
+local Stats = require(script.Stats)
 
 local Networking = {}
 
 Networking.Bank = Bank.new
+Networking.Stats = Stats
 
 export type Bank = Bank.Bank
 export type Event<Args> = Event.Event<Args>
 export type UnreliableEvent<Args> = UnreliableEvent.UnreliableEvent<Args>
 export type Request<Args, Return> = Request.Request<Args, Return>
+export type NetworkStats = Stats.Snapshot
+export type NetworkPacketStat = Stats.PacketStat
 
 return Networking

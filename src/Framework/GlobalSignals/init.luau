@@ -3,7 +3,7 @@
 	@module GlobalSignals
 	Shared in-process signal registry with bank support. Use it when several
 	scripts in the same server/client VM need to publish and listen to
-	lightweight Lua events without passing object references around.
+	events without passing object references around.
 
 	For client/server remotes use `Framework.Networking`; for cross-server
 	MessagingService use `Framework.GlobalMessaging`.

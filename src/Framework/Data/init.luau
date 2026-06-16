@@ -28,6 +28,7 @@ local Server = require(script.Server)
 local Client = require(script.Client)
 local Data = require(script.Data)
 local Paths = require(script.Paths)
+local Migration = require(script.Migration)
 
 export type Server = typeof(Server)
 export type Client = typeof(Client)
@@ -35,10 +36,13 @@ export type Data = Data.Data
 export type Path = Data.Path
 export type AnyPath = Paths.Path
 export type AnyArrayPath = Paths.ArrayPath
+export type Migrator = Migration.Migrator
+export type MigrationConfig = Migration.Config
 
 return {
 	server = Server,
 	client = Client,
 	Data = Data,
 	Paths = Paths,
+	Migration = Migration,
 }

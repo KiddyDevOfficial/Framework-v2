@@ -1,11 +1,7 @@
 --!strict
 --[=[
 	@module Framework
-	Type-first, modular framework for Roblox/Luau. No classes, no
-	inheritance, no abstract methods - just tables with `:Init` / `:Start`
-	methods, dependency ordering, and a CollectionService-driven component
-	runtime.
-
+	
 	The pieces:
 	  * `CreateService`     - server singleton modules (`:Init`, `:Start`, ...).
 	  * `CreateController`  - client singleton modules.
@@ -29,8 +25,8 @@
 	  * `Types`             - `Option<T>`, `Result<T, E>`, helpers.
 	  * `Util`              - `Trove`, `TableUtil`, `StringUtil`,
 	                          `NumberUtil`, `Debounce`, `Timer`, `Promise`,
-	                          `StateMachine`, `GuiButton` (also re-exported
-	                          at top level).
+	                          `StateMachine`, `Input`, `AssetPreloader`,
+	                          `GuiButton` (also re-exported at top level).
 
 	Fetching a unit: every framework module already returns its typed
 	singleton, so just `require` it directly - no `Framework.GetService(name)`
@@ -144,6 +140,11 @@ Framework.StateMachine = Util.StateMachine
 Framework.Spring = Util.Spring
 Framework.Queue = Util.Queue
 Framework.Cache = Util.Cache
+Framework.Input = Util.Input
+Framework.AssetPreloader = Util.AssetPreloader
+Framework.Log = Util.Log
+Framework.DebugOverlay = Util.DebugOverlay
+Framework.Sound = Util.Sound
 
 export type Signal<T...> = Signal.Signal<T...>
 export type Connection = Signal.Connection
@@ -221,6 +222,23 @@ export type StateConfig<D> = Util.StateConfig<D>
 export type StateContext<D> = Util.StateContext<D>
 export type StateMachineConfig<D> = Util.StateMachineConfig<D>
 export type StateMachineGroup<K, D> = Util.StateMachineGroup<K, D>
+export type InputMap = Util.InputMap
+export type InputButton = Util.InputButton
+export type InputDevice = Util.InputDevice
+export type InputOptions = Util.InputOptions
+export type Preloader = Util.Preloader
+export type PreloadContent = Util.PreloadContent
+export type Logger = Util.Logger
+export type LogLevel = Util.LogLevel
+export type LogSink = Util.LogSink
+export type DebugOverlay = Util.DebugOverlay
+export type DebugOverlayOptions = Util.DebugOverlayOptions
+export type SoundPlayer = Util.SoundPlayer
+export type SoundOptions = Util.SoundOptions
+export type SoundPlayProps = Util.SoundPlayProps
+export type NetworkStats = Networking.NetworkStats
+export type NetworkPacketStat = Networking.NetworkPacketStat
+export type DataMigrator = DataAdapter.DataMigrator
 
 table.freeze(Framework)
 return Framework

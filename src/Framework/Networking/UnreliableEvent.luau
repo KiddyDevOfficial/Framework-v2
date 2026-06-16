@@ -10,6 +10,7 @@
 local Players = game:GetService("Players")
 
 local Manager = require(script.Parent.Manager)
+local Stats = require(script.Parent.Stats)
 
 local UnreliableEvent = {}
 UnreliableEvent.__index = UnreliableEvent
@@ -40,29 +41,36 @@ function UnreliableEvent.new<Args>(bankFolder: Folder, bankName: string, name: s
 end
 
 function UnreliableEvent.FireServer<Args>(self: UnreliableEvent<Args>, args: Args)
+	Stats.record(self.Bank, self.Name, "out")
 	self._remote:FireServer(args)
 end
 
 function UnreliableEvent.FireClient<Args>(self: UnreliableEvent<Args>, player: Player, args: Args)
+	Stats.record(self.Bank, self.Name, "out")
 	self._remote:FireClient(player, args)
 end
 
 function UnreliableEvent.FireAllClients<Args>(self: UnreliableEvent<Args>, args: Args)
+	Stats.record(self.Bank, self.Name, "out")
 	self._remote:FireAllClients(args)
 end
 
 function UnreliableEvent.FireClients<Args>(self: UnreliableEvent<Args>, players: { Player }, args: Args)
+	Stats.record(self.Bank, self.Name, "out", #players)
 	for _, player in players do
 		self._remote:FireClient(player, args)
 	end
 end
 
 function UnreliableEvent.FireAllClientsExcept<Args>(self: UnreliableEvent<Args>, excluded: Player, args: Args)
+	local sent = 0
 	for _, player in Players:GetPlayers() do
 		if player ~= excluded then
+			sent += 1
 			self._remote:FireClient(player, args)
 		end
 	end
+	Stats.record(self.Bank, self.Name, "out", sent)
 end
 
 function UnreliableEvent.OnServerEvent<Args>(
@@ -70,6 +78,7 @@ function UnreliableEvent.OnServerEvent<Args>(
 	handler: (player: Player, args: Args) -> ()
 ): RBXScriptConnection
 	return self._remote.OnServerEvent:Connect(function(player: Player, args: any)
+		Stats.record(self.Bank, self.Name, "in")
 		handler(player, args :: Args)
 	end)
 end
@@ -79,6 +88,7 @@ function UnreliableEvent.OnClientEvent<Args>(
 	handler: (args: Args) -> ()
 ): RBXScriptConnection
 	return self._remote.OnClientEvent:Connect(function(args: any)
+		Stats.record(self.Bank, self.Name, "in")
 		handler(args :: Args)
 	end)
 end

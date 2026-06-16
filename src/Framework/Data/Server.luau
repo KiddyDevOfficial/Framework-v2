@@ -20,6 +20,7 @@ local Signal = require(script.Parent.Parent.Signal)
 local Data = require(script.Parent.Data)
 local Profile = require(script.Parent.Profile)
 local Networking = require(script.Parent.Networking)
+local Migration = require(script.Parent.Migration)
 local Utils = require(script.Parent.Utils)
 
 if RunService:IsClient() then
@@ -38,6 +39,8 @@ export type Options = {
 	resetData: boolean?,
 	profileStoreIndex: string?,
 	profileStoreDataPrefix: string?,
+	migrations: { Migration.Migrator }?,
+	dataVersionKey: string?,
 }
 
 local DEFAULT_INDEX = "PlayerData"
@@ -54,6 +57,7 @@ local Server = {
 	_initialized = false,
 	_replicate = nil :: RemoteEvent?,
 	_fetch = nil :: RemoteFunction?,
+	_migration = nil :: Migration.Config?,
 	options = (nil :: any) :: Options,
 	store = nil :: Profile.Store?,
 }
@@ -113,6 +117,23 @@ local function attachPlayer(self: any, player: Player)
 	end
 
 	profile:AddUserId(userId)
+
+	-- Upgrade the saved schema before reconcile fills template defaults. A
+	-- brand-new profile (empty Data) skips migration and starts stamped at the
+	-- target version; existing data runs the outstanding migrators.
+	local migration = self._migration
+	if migration then
+		local data = profile.Data
+		if next(data) == nil then
+			data[Migration.keyOf(migration)] = Migration.targetVersion(migration)
+		else
+			local ok, err = pcall(Migration.run, data, migration)
+			if not ok then
+				warn(`[Framework.DataService] data migration failed for {player.Name}: {err}`)
+			end
+		end
+	end
+
 	profile:Reconcile()
 
 	-- Pipe ProfileStore's cross-server queue into addGlobalCallback.
@@ -196,6 +217,19 @@ function Server.init(self: any, options: Options)
 
 	self._initialized = true
 	self.options = options
+
+	-- Bind schema migrations and stamp the template so fresh profiles start at
+	-- the target version. Done before openStore since ProfileStore captures the
+	-- template at store creation.
+	if options.migrations and #options.migrations > 0 then
+		local config: Migration.Config = {
+			migrations = options.migrations,
+			versionKey = options.dataVersionKey,
+		}
+		self._migration = config
+		Migration.stampTemplate(options.template, config)
+	end
+
 	self.store = Profile.openStore(
 		options.profileStoreIndex or DEFAULT_INDEX,
 		options.useMock == true,

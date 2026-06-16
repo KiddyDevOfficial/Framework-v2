@@ -4,19 +4,30 @@
 	Hover / press size tweens and optional GUI sounds for `GuiButton`
 	instances tagged `"Button"` through CollectionService.
 
+	Sounds are routed through the [`Sound`](./Sound.luau) handler - they're
+	played *by name* from a sound library, so each press is a fresh clone (no
+	cutting itself off) and volume flows through the handler's groups. By
+	default it uses an internal handler pointed at `SoundService.GuiSounds`;
+	pass `soundPlayer` to share your own handler - e.g. the client
+	`SoundController`'s `.Player` - so button sounds sit under the same master
+	/ group volume as the rest of the game.
+
 	Studio setup:
 	  - Tag any `GuiButton` with `Button` (CollectionService tag).
 	  - Optional `SizeFactor` attribute (number, default `1.08`) sets the
 	    hover scale for that button.
-	  - Optional `SoundService.GuiSounds` folder with `Click` and `Hover`
-	    Sound children.
+	  - For the default handler, add a `SoundService.GuiSounds` folder with
+	    `Click` and `Hover` `Sound` children.
 
 	```lua
 	local GuiButton = Framework.Util.GuiButton
 
 	GuiButton.bind(shopButton)
 	GuiButton.bindIn(playerGui:WaitForChild("HUD"))
-	GuiButton.bindTagged()
+
+	-- route button sounds through the SoundController's handler + volume groups
+	local SoundController = require(StarterPlayerScripts.Client.Controllers.SoundController)
+	GuiButton.bindTagged({ soundPlayer = SoundController.Player, soundGroup = "UI" })
 	```
 ]=]
 
@@ -25,22 +36,24 @@ local TweenService = game:GetService("TweenService")
 local SoundService = game:GetService("SoundService")
 
 local Trove = require(script.Parent.Trove)
+local Sound = require(script.Parent.Sound)
 
 local BUTTON_TAG = "Button"
 local SIZE_FACTOR_ATTRIBUTE = "SizeFactor"
 local DEFAULT_SCALE_FACTOR = 1.08
+local DEFAULT_CLICK_SOUND = "Click"
+local DEFAULT_HOVER_SOUND = "Hover"
+local DEFAULT_LIBRARY_NAME = "GuiSounds"
 local TWEEN_INFO = TweenInfo.new(0.12, Enum.EasingStyle.Back, Enum.EasingDirection.Out)
 local PRESS_RELEASE_DELAY = 0.1
 
-export type Sounds = {
-	Click: Sound?,
-	Hover: Sound?,
-}
-
 export type Options = {
 	scaleFactor: number?,
-	sounds: Sounds?,
 	tweenInfo: TweenInfo?,
+	soundPlayer: Sound.SoundPlayer?,
+	clickSound: string?,
+	hoverSound: string?,
+	soundGroup: string?,
 }
 
 local GuiButtonUtil = {
@@ -53,26 +66,27 @@ end)
 
 local activeTweens: { [GuiButton]: Tween } = {}
 
-local function resolveSounds(custom: Sounds?): Sounds
-	if custom then
-		return custom
+local defaultPlayer: Sound.SoundPlayer? = nil
+local function getDefaultPlayer(): Sound.SoundPlayer
+	local player: Sound.SoundPlayer = defaultPlayer or Sound.new()
+	defaultPlayer = player
+	if not player:hasLibrary() then
+		local folder = SoundService:FindFirstChild(DEFAULT_LIBRARY_NAME)
+		if folder then
+			player:setLibrary(folder)
+		end
 	end
-	local folder = SoundService:FindFirstChild("GuiSounds")
-	if not folder then
-		return {}
-	end
-	local click = folder:FindFirstChild("Click")
-	local hover = folder:FindFirstChild("Hover")
-	return {
-		Click = if click and click:IsA("Sound") then click else nil,
-		Hover = if hover and hover:IsA("Sound") then hover else nil,
-	}
+	return player
 end
 
-local function playSound(sound: Sound?)
-	if sound then
-		sound:Play()
+local function playNamed(player: Sound.SoundPlayer, name: string, group: string?)
+	if not player:hasLibrary() then
+		return
 	end
+	if not player:get(name) then
+		return
+	end
+	player:play(name, if group then { group = group } else nil)
 end
 
 local function scaledSize(size: UDim2, factor: number): UDim2
@@ -112,10 +126,13 @@ end
 	disconnects everything on `:destroy()`.
 ]=]
 function GuiButtonUtil.bind(button: GuiButton, options: Options?): Trove.Trove
-	local opts = options or {}
+	local opts: Options = options or {}
 	local scaleFactor = opts.scaleFactor or readScaleFactor(button, DEFAULT_SCALE_FACTOR)
 	local tweenInfo = opts.tweenInfo or TWEEN_INFO
-	local sounds = resolveSounds(opts.sounds)
+	local player = opts.soundPlayer or getDefaultPlayer()
+	local clickSound = opts.clickSound or DEFAULT_CLICK_SOUND
+	local hoverSound = opts.hoverSound or DEFAULT_HOVER_SOUND
+	local soundGroup = opts.soundGroup
 
 	local defaultSize = button.Size
 	local hoverSize = scaledSize(defaultSize, scaleFactor)
@@ -124,7 +141,7 @@ function GuiButtonUtil.bind(button: GuiButton, options: Options?): Trove.Trove
 
 	trove:add(button.MouseEnter:Connect(function()
 		hovering = true
-		playSound(sounds.Hover)
+		playNamed(player, hoverSound, soundGroup)
 		tweenSize(button, hoverSize, tweenInfo)
 	end))
 
@@ -134,7 +151,7 @@ function GuiButtonUtil.bind(button: GuiButton, options: Options?): Trove.Trove
 	end))
 
 	trove:add(button.MouseButton1Down:Connect(function()
-		playSound(sounds.Click)
+		playNamed(player, clickSound, soundGroup)
 		tweenSize(button, defaultSize, tweenInfo)
 		task.delay(PRESS_RELEASE_DELAY, function()
 			if not button.Parent then
@@ -176,7 +193,7 @@ local function watchTagged(
 	root: Instance?,
 	options: Options?
 ): Trove.Trove
-	local opts = options or {}
+	local opts: Options = options or {}
 	local fallbackFactor = opts.scaleFactor
 		or (if root then resolveContainerScaleFactor(root, DEFAULT_SCALE_FACTOR) else DEFAULT_SCALE_FACTOR)
 	local master = Trove.new()
@@ -205,8 +222,11 @@ local function watchTagged(
 		local factor = readScaleFactor(button, fallbackFactor)
 		local trove = GuiButtonUtil.bind(button, {
 			scaleFactor = factor,
-			sounds = opts.sounds,
 			tweenInfo = opts.tweenInfo,
+			soundPlayer = opts.soundPlayer,
+			clickSound = opts.clickSound,
+			hoverSound = opts.hoverSound,
+			soundGroup = opts.soundGroup,
 		})
 		buttonTroves[button] = trove
 		master:add(trove)

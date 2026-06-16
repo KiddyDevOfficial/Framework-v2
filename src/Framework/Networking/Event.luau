@@ -10,6 +10,7 @@
 local Players = game:GetService("Players")
 
 local Manager = require(script.Parent.Manager)
+local Stats = require(script.Parent.Stats)
 
 local Event = {}
 Event.__index = Event
@@ -37,29 +38,36 @@ function Event.new<Args>(bankFolder: Folder, bankName: string, name: string): Ev
 end
 
 function Event.FireServer<Args>(self: Event<Args>, args: Args)
+	Stats.record(self.Bank, self.Name, "out")
 	self._remote:FireServer(args)
 end
 
 function Event.FireClient<Args>(self: Event<Args>, player: Player, args: Args)
+	Stats.record(self.Bank, self.Name, "out")
 	self._remote:FireClient(player, args)
 end
 
 function Event.FireAllClients<Args>(self: Event<Args>, args: Args)
+	Stats.record(self.Bank, self.Name, "out")
 	self._remote:FireAllClients(args)
 end
 
 function Event.FireClients<Args>(self: Event<Args>, players: { Player }, args: Args)
+	Stats.record(self.Bank, self.Name, "out", #players)
 	for _, player in players do
 		self._remote:FireClient(player, args)
 	end
 end
 
 function Event.FireAllClientsExcept<Args>(self: Event<Args>, excluded: Player, args: Args)
+	local sent = 0
 	for _, player in Players:GetPlayers() do
 		if player ~= excluded then
+			sent += 1
 			self._remote:FireClient(player, args)
 		end
 	end
+	Stats.record(self.Bank, self.Name, "out", sent)
 end
 
 function Event.OnServerEvent<Args>(
@@ -67,12 +75,14 @@ function Event.OnServerEvent<Args>(
 	handler: (player: Player, args: Args) -> ()
 ): RBXScriptConnection
 	return self._remote.OnServerEvent:Connect(function(player: Player, args: any)
+		Stats.record(self.Bank, self.Name, "in")
 		handler(player, args :: Args)
 	end)
 end
 
 function Event.OnClientEvent<Args>(self: Event<Args>, handler: (args: Args) -> ()): RBXScriptConnection
 	return self._remote.OnClientEvent:Connect(function(args: any)
+		Stats.record(self.Bank, self.Name, "in")
 		handler(args :: Args)
 	end)
 end

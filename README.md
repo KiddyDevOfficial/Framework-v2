@@ -66,7 +66,8 @@ The framework ships with these pieces:
   servers through GlobalMessaging, via `CreateFFlagsService`.
 - **Util** — `Trove`, `TableUtil`, `StringUtil`, `NumberUtil`, `Debounce`,
   `Timer`, `Promise`, `Observer`, `StateMachine`, `Spring`, `Queue`, `Cache`,
-  `GuiButton` (CollectionService tag `Button`).
+  `Input`, `AssetPreloader`, `Log`, `DebugOverlay`, `Sound`, `GuiButton`
+  (CollectionService tag `Button`).
 - **Enum** — immutable, comparable enumerations.
 - **Symbol** — opaque identity tokens.
 - **Types** — `Option<T>`, `Result<T, E>`, helpers.
@@ -87,8 +88,8 @@ Everything below is on the root `Framework` table (also available as
 | **GlobalSignals** | `GlobalSignals`, `GlobalSignals.Bank`, `GlobalSignals.Signal`, `Bank:Signal` |
 | **GlobalMessaging** | `CreateGlobalMessagingService`, `GlobalMessaging` (`{ server, Bank }`), `Bank:Event`, `Subscribe`, `Publish` |
 | **FFlags** | `CreateFFlagsService`, `CreateFFlagsController`, `FFlags` (`{ server, client }`), `Get`, `Set`, `Observe`, `Remove` |
-| **Core** | `Signal`, `Networking`, `Enum`, `Symbol`, `Types` |
-| **Util** (also top-level) | `Util`, `Trove`, `TableUtil`, `StringUtil`, `NumberUtil`, `Debounce`, `Timer`, `Promise`, `Observer`, `StateMachine`, `Spring`, `Queue`, `Cache`, `GuiButton` |
+| **Core** | `Signal`, `Networking`, `Networking.Stats`, `Enum`, `Symbol`, `Types` |
+| **Util** (also top-level) | `Util`, `Trove`, `TableUtil`, `StringUtil`, `NumberUtil`, `Debounce`, `Timer`, `Promise`, `Observer`, `StateMachine`, `Spring`, `Queue`, `Cache`, `Input`, `AssetPreloader`, `Log`, `DebugOverlay`, `Sound`, `GuiButton` |
 
 **Typed requires (recommended):** service/controller modules already *are*
 the singleton. Prefer `require(path.to.DataService)` over
@@ -433,6 +434,42 @@ DataService:GetChangedSignal(player, "currency"):connect(function(new) print(new
 > `Signal`s, so listeners use the lowercase `:connect` / `:once` /
 > `:disconnect` / `:wait` API.
 
+#### Schema migrations
+
+When you change the shape of saved data after launch, register `Migrations` so
+old profiles upgrade on load instead of breaking. It's an ordered list where
+migrator `i` upgrades data from version `i-1` to `i`; the target version is
+`#Migrations`. A version number is stamped into the data under `DataVersionKey`
+(default `_dataVersion`).
+
+```lua
+local DataService: Class = Framework.CreateDataService({
+    Name = "DataService",
+    Template = DataTemplate,
+    Migrations = {
+        -- v0 -> v1: split "name" into first / last
+        function(data)
+            local first, last = string.match(data.name or "", "(%S+)%s*(.*)")
+            data.firstName, data.lastName, data.name = first or data.name, last, nil
+        end,
+        -- v1 -> v2: move coins under a wallet table
+        function(data)
+            data.wallet = { coins = data.coins or 0 }
+            data.coins = nil
+        end,
+    },
+})
+```
+
+On load the framework reads the stored version (a profile saved before you
+added versioning counts as `0`) and runs every outstanding migrator up to the
+target, **before** ProfileStore's template reconcile — so migrations reshape
+the old data first and reconcile then fills in any newly-added template
+defaults. New players start already at the target version (a fresh profile is a
+copy of the template, which the framework stamps at init), so they skip
+migration entirely. A migrator that errors is logged and aborts that profile's
+run at the last version that succeeded.
+
 ### Typed paths from `DataTemplate`
 
 `export type DataTemplate` in `src/shared/DataTemplate.luau` drives compile-time
@@ -673,6 +710,28 @@ local snap = Net.GetSnapshot:InvokeServer(nil)
 
 Packet kinds: `Bank:Event` (reliable `RemoteEvent`), `Bank:UnreliableEvent`
 (`UnreliableRemoteEvent`), `Bank:Request` (`RemoteFunction`).
+
+### Traffic stats — `Networking.Stats`
+
+Opt-in counters that every packet reports to. They count **logical packet
+operations** (one `FireServer` / `FireAllClients` / `InvokeServer` out, one
+handler invocation in) rather than bytes — Roblox gives no cheap per-packet
+size, but call volume is what flags a remote firing far too often. When
+disabled (the default), `record` is a single boolean check, so the hot path
+stays cheap. [`DebugOverlay`](#debugoverlay) drives this automatically.
+
+```lua
+local Stats = Framework.Networking.Stats
+
+Stats.setEnabled(true)
+-- ...play for a bit...
+local snap = Stats.snapshot()           -- { enabled, outgoing, incoming, perPacket }
+print(snap.outgoing, snap.incoming)     -- totals since last reset
+for key, packet in snap.perPacket do
+    print(key, packet.outgoing, packet.incoming)   -- key is "Bank.Packet"
+end
+Stats.reset()                           -- zero counters (call on an interval for a rate)
+```
 
 ---
 
@@ -1044,6 +1103,11 @@ Re-exported on `Framework` and grouped under `Framework.Util`.
 | `Spring` | Physics spring for `number` / `Vector2` / `Vector3` (camera, UI, recoil). |
 | `Queue` | Generic FIFO queue with amortized O(1) `push` / `pop`. |
 | `Cache` | Generic cache with optional LRU capacity + TTL expiry. |
+| `Input` | Device-agnostic action map: bind/rebind named actions, `isDown`, device tracking. |
+| `AssetPreloader` | `Promise`-based `ContentProvider:PreloadAsync` wrapper with progress signals. |
+| `Log` | Leveled, tagged logging with global/per-tag levels and optional FFlag gating. |
+| `DebugOverlay` | On-screen FPS / frame-time + remote-traffic HUD, gatable behind an FFlag. |
+| `Sound` | Library-folder sound handler: play by name (2D / positional / on-instance), groups + volume. |
 | `GuiButton` | Hover/press tweens + sounds for GUI tagged `Button`. Optional `SizeFactor` attribute. |
 
 ```lua
@@ -1234,6 +1298,240 @@ end
 | `remove(key)` / `clear()` | Drop one / all entries. |
 | `size()` | Count of stored entries. |
 | `keys()` | Keys ordered least- to most-recently-used. |
+
+---
+
+## Input
+
+Device-agnostic **action map**. Bind named actions to one or more buttons —
+`Enum.KeyCode` for keyboard / gamepad, `Enum.UserInputType` for mouse buttons —
+then listen for the action instead of wiring raw `UserInputService` events all
+over the place. Rebinding is one call, an action can hold several bindings at
+once, and the map tracks the active device so you can swap button prompts.
+Client-only in practice (it listens to `UserInputService`); on the server the
+signals just stay quiet. Reachable as `Framework.Input`.
+
+```lua
+local Input = Framework.Input
+
+local map = Input.new()
+map:bind("Jump", { Enum.KeyCode.Space, Enum.KeyCode.ButtonA })
+map:bind("Fire", { Enum.UserInputType.MouseButton1, Enum.KeyCode.ButtonR2 })
+
+map:onBegan("Jump", function()
+    character:jump()
+end)
+
+-- query state per-frame when you need it
+if map:isDown("Fire") then
+    weapon:tryShoot()
+end
+
+-- player rebinding + KBM / controller swaps
+map:rebind("Jump", { Enum.KeyCode.W })
+map.DeviceChanged:connect(function(device)
+    hud:setPromptStyle(device)        -- "KeyboardMouse" | "Gamepad" | "Touch"
+end)
+
+map:destroy()
+```
+
+| Method | Purpose |
+| --- | --- |
+| `new(options?)` | New map. `{ ignoreProcessed? }` (default `true`) skips inputs the engine already consumed. |
+| `bind(action, buttons)` | Add bindings for an action (chainable). |
+| `rebind(action, buttons)` | Replace every binding for an action (chainable). |
+| `unbind(action)` | Drop all bindings for an action. |
+| `getBindings(action)` | Cloned list of buttons bound to the action. |
+| `isDown(action)` | Whether any button for the action is currently held. |
+| `onBegan(action, cb)` / `onEnded(action, cb)` | Connect to one action's press / release; returns a `Connection`. |
+| `setEnabled(enabled)` | Toggle the whole map; disabling releases held actions cleanly. |
+| `getDevice()` | Current device category. |
+| `destroy()` | Disconnect everything and destroy the signals. |
+
+Signals: `Began(action, input)`, `Ended(action, input)`, `DeviceChanged(device)`.
+
+A ready-made `InputController` (`src/client/Controllers/InputController.luau`)
+wraps a shared map as a singleton — depend on `"InputController"` (or just
+require it) and call `InputController:bind(...)` / `:isDown(...)` from any
+controller, no setup needed.
+
+---
+
+## AssetPreloader
+
+`Promise`-based wrapper over `ContentProvider:PreloadAsync`. Hand it `Instance`s
+(their asset-bearing properties resolve automatically) or raw content ids, await
+the promise, and drive a loading bar off the `Progress` signal. Counts
+accumulate across calls, so one preloader can back a whole loading screen.
+Reachable as `Framework.AssetPreloader`.
+
+```lua
+local AssetPreloader = Framework.AssetPreloader
+
+local loader = AssetPreloader.new()
+
+loader.Progress:connect(function(loaded, total, lastId)
+    loadingBar.Size = UDim2.fromScale(loaded / total, 1)
+end)
+
+loader:preload({
+    ReplicatedStorage.Assets,           -- folder of decals / sounds / meshes
+    "rbxassetid://1234567890",
+}):andThen(function(count)
+    print(`preloaded {count} assets`)
+    loadingScreen:hide()
+end):catch(warn)
+
+loader:destroy()
+```
+
+| Method | Purpose |
+| --- | --- |
+| `new()` | New preloader with its own running tally. |
+| `preload(content)` | Preload a batch; returns `Promise<number>` (assets this call covered). |
+| `getProgress()` | Fraction loaded across all calls, `0`..`1` (`1` before anything is queued). |
+| `loadedCount()` / `totalCount()` | Cumulative resolved / queued asset counts. |
+| `destroy()` | Destroy the signals. |
+
+Signals: `Progress(loaded, total, lastContentId)`, `AssetLoaded(contentId, status)`.
+
+A ready-made `AssetPreloaderController`
+(`src/client/Controllers/AssetPreloaderController.luau`) wraps one shared
+preloader as a singleton — require it and call `:preload(...)` / connect
+`Progress` from anywhere.
+
+---
+
+## Log
+
+Leveled, tagged logging. One logger per system; output is prefixed
+`[LEVEL][Tag]` and routed through `print` (trace/debug/info) or `warn`
+(warn/error). A global minimum level — with optional per-tag overrides —
+decides what actually prints, so `debug` calls can stay in the code and only
+light up when you raise the level. Reachable as `Framework.Log`.
+
+```lua
+local Log = Framework.Log
+
+local log = Log.new("Combat")
+log:info("hit", target.Name, "for", damage)   -- [INFO][Combat] hit Rig for 12
+log:debug("internal state", state)             -- hidden unless level <= Debug
+
+Log.setLevel(Log.Level.Debug)                  -- globally show debug and up
+Log.setTagLevel("Combat", Log.Level.Trace)     -- but trace just for Combat
+```
+
+Levels are ordered numbers: `Trace` (10) < `Debug` (20) < `Info` (30) <
+`Warn` (40) < `Error` (50) < `None` (100, mutes everything).
+
+**FFlag-gated verbosity.** `Log` never hard-depends on `FFlags`; it only needs
+something exposing `observe(name, handler)`, which both sides of
+`Framework.FFlags` provide. The flag value may be a level name (`"debug"`) or a
+raw number:
+
+```lua
+-- server
+Log.useFFlag(Framework.FFlags.server, "LogLevel")
+-- client (after the controller is ready)
+local unbind = Log.useFFlag(Framework.FFlags.client, "LogLevel")
+```
+
+| Method | Purpose |
+| --- | --- |
+| `new(tag, level?)` | Tagged logger; optional private minimum level. |
+| `log/trace/debug/info/warn/error(...)` | Emit at a level (logger methods). |
+| `setLevel(level)` / `getLevel()` | Global minimum level. |
+| `setTagLevel(tag, level?)` | Per-tag override (`nil` clears). |
+| `setSink(fn?)` | Redirect output (e.g. to an overlay / remote collector). |
+| `useFFlag(fflags, name)` | Track the global level off an FFlag; returns unsubscribe. |
+| `levelFromValue(value)` | Resolve a name/number to a level. |
+
+---
+
+## DebugOverlay
+
+A small on-screen HUD: frame rate / frame time (with the window's worst frame)
+plus remote-traffic rate read from [`Networking.Stats`](#networking). Client
+-only; the GUI is built lazily on first show. While visible it enables
+`Networking.Stats` (and disables it again on hide if it was the one that turned
+it on), so you only pay for counting while you're watching. Reachable as
+`Framework.DebugOverlay`.
+
+```lua
+local DebugOverlay = Framework.DebugOverlay
+
+local overlay = DebugOverlay.new()
+
+-- gate it behind an FFlag for live sessions...
+overlay:bindFFlag(Framework.FFlags.client, "ShowDebugOverlay")
+
+-- ...or drive it yourself (e.g. F3 via Framework.Input)
+overlay:toggle()
+```
+
+| Method | Purpose |
+| --- | --- |
+| `new(options?)` | `{ refreshInterval?, position? }`; nothing draws until shown. |
+| `show()` / `hide()` / `toggle()` | Visibility control. |
+| `setVisible(visible)` / `isVisible()` | Set / query visibility. |
+| `bindFFlag(fflags, name)` | Show/hide from a boolean FFlag; returns unsubscribe. |
+| `destroy()` | Disconnect and tear down the GUI. |
+
+---
+
+## Sound
+
+A small sound handler. Point it at a folder of template `Sound`s — your sound
+**library** — then play them by name, as 2D UI sounds, at a world position, or
+parented to an instance. Each playback is a clone, so a sound can overlap
+itself; non-looping clones clean themselves up when they finish. Volume runs
+through lazily-created `SoundGroup`s nested under one master group, so
+`setMasterVolume` scales everything. Reachable as `Framework.Sound`.
+
+```lua
+local Sound = Framework.Sound
+
+local sfx = Sound.new()
+sfx:setLibrary(ReplicatedStorage.Assets.Sounds)   -- folder of Sound templates
+
+sfx:play("Coin")                                   -- 2D one-shot
+sfx:play("Theme", { looped = true, group = "Music" })
+sfx:playAt("Explosion", hitPosition, { group = "SFX" })   -- Vector3 or BasePart
+sfx:playOn("Engine", car.PrimaryPart, { looped = true })
+
+sfx:setGroupVolume("Music", 0.5)
+sfx:setMasterVolume(0.8)
+sfx:setMuted(true)
+```
+
+Lookup is recursive, so a library split into `SFX/` and `Music/` subfolders
+still resolves by bare name. `play*` returns the playing clone (or `nil` if the
+name/library is missing).
+
+| Method | Purpose |
+| --- | --- |
+| `new(options?)` | `{ library?, defaultParent?, masterGroupName? }`. |
+| `setLibrary(folder)` / `getLibrary()` / `hasLibrary()` | Assign / read the template folder. |
+| `get(name)` | The template `Sound` (clone it, or use `play`). |
+| `play(name, props?)` | 2D one-shot under `defaultParent` (SoundService). |
+| `playOn(name, parent, props?)` | Play parented to an instance (3D falloff). |
+| `playAt(name, Vector3 \| BasePart, props?)` | Play at a position (spawns a holder part) or on a part. |
+| `stop(sound)` / `stopAll()` | Dispose one / all sounds this player started. |
+| `getGroup(name)` / `setGroupVolume(name, v)` | Managed `SoundGroup` under master. |
+| `setMasterVolume(v)` / `getMasterVolume()` | Master group volume. |
+| `setMuted(muted)` / `isMuted()` | Mute (zeroes master, restores on unmute). |
+| `destroy()` | Stop everything and remove the groups. |
+
+`props` accept `volume`, `playbackSpeed`, `looped`, `timePosition`, `soundId`
+(override the asset), `group` (managed group name), and `soundGroup` (an explicit
+`SoundGroup`, takes priority).
+
+A ready-made `SoundController`
+(`src/client/Controllers/SoundController.luau`) wraps one shared handler as a
+singleton — it auto-assigns `SoundService.Sounds` on `Init` if present, and any
+controller can `SoundController:play("...")` after depending on
+`"SoundController"`.
 
 ---
 

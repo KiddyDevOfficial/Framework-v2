@@ -25,11 +25,13 @@ local Service = require(script.Parent.Parent.Modular.Service)
 local Controller = require(script.Parent.Parent.Modular.Controller)
 local DataPackage = require(script.Parent.Parent.Data)
 local Paths = require(script.Parent.Parent.Data.Paths)
+local Migration = require(script.Parent.Parent.Data.Migration)
 
 local Data = {}
 
 export type AnyPath = Paths.Path
 export type AnyArrayPath = Paths.ArrayPath
+export type DataMigrator = Migration.Migrator
 
 export type ServerOptions<T = { [string]: any }> = {
 	Name: string?,
@@ -43,6 +45,10 @@ export type ServerOptions<T = { [string]: any }> = {
 	DontSave: boolean?,
 	ResetData: boolean?,
 	OnPlayerInit: ((self: any, player: Player, data: T) -> ())?,
+	-- Ordered schema migrators; migrator `i` upgrades v(i-1) -> v(i).
+	Migrations: { DataMigrator }?,
+	-- Field the schema version is stamped under (default `_dataVersion`).
+	DataVersionKey: string?,
 }
 
 export type ClientOptions<T = { [string]: any }> = {
@@ -164,6 +170,8 @@ function Data.CreateService<T, TPath, TArrayPath>(options: ServerOptions<T>): Se
 			resetData = options.ResetData,
 			profileStoreIndex = options.ProfileStoreIndex,
 			profileStoreDataPrefix = options.ProfileStoreDataPrefix,
+			migrations = options.Migrations,
+			dataVersionKey = options.DataVersionKey,
 		})
 	end
 

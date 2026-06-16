@@ -7,11 +7,8 @@
 export type ValueClass = "IntValue" | "NumberValue" | "StringValue"
 
 export type Entry = {
-	-- DataService path (`"currency"`, `{ "settings", "musicVolume" }`, ...)
 	Path: string | { string | number },
-	-- Instance name under the player's leaderstats folder
 	Name: string,
-	-- Left out? We pick IntValue / NumberValue / StringValue from the current value
 	Class: ValueClass?,
 }
 
