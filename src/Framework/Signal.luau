@@ -1,5 +1,17 @@
 --!strict
---[=[ @module Signal ]=]
+--[=[ @module Signal 
+	Generic signal module for connecting and firing events.
+
+	```lua
+	local Signal = require(Framework.Signal)
+
+	local signal = Signal.new()
+	signal:connect(function(value)
+		print(value)
+	end)
+	signal:fire(1)
+	```
+]=]
 
 local Signal = {}
 Signal.__index = Signal
