@@ -1,10 +1,9 @@
 --!strict
 --[=[
 	@module Util.Queue
-	A FIFO queue with amortized O(1) `push` / `pop`. Two moving indices instead
-	of `table.remove`, so popping never shifts the backing array. Good for job
-	pipelines, networking backpressure, turn order - anything processed in
-	arrival order.
+	FIFO queue with amortized O(1) `push` / `pop`. It keeps moving indices
+	instead of shifting the backing array, so it works well for ordered jobs,
+	networking backpressure, or turn queues.
 
 	```lua
 	local Queue = Framework.Queue
@@ -36,9 +35,6 @@ export type Queue<T> = {
 	toArray: (self: Queue<T>) -> { T },
 }
 
---[=[
-	New empty queue. Pass an array to seed it (copied, head first).
-]=]
 function Queue.new<T>(initial: { T }?): Queue<T>
 	local items: { [number]: T } = {}
 	local first = 1
@@ -72,7 +68,7 @@ function Queue.pop<T>(self: Queue<T>): T?
 	local value = s._items[s._first]
 	s._items[s._first] = nil
 	s._first += 1
-	-- Empty now; reset indices so the array doesn't grow forever
+	-- Reset after draining so sparse indices do not drift forever.
 	if s._first > s._last then
 		s._first = 1
 		s._last = 0

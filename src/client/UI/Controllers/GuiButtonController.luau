@@ -1,17 +1,14 @@
 --!strict
 --[=[
 	@controller GuiButtonController
-	Auto-binds every `GuiButton` under `PlayerGui` tagged `Button` via
-	CollectionService. New tagged buttons are picked up at runtime.
+	Auto-binds tagged `GuiButton`s under `PlayerGui`. New tagged buttons are
+	picked up at runtime.
 
-	Owns a `Framework.Util.Sound` handler pointed at `SoundService.GuiSounds`
-	and routes every button's hover / click through it (resolved by name -
-	`Hover` / `Click`), so presses clone instead of cutting themselves off and
-	UI audio can be volume-controlled / muted via `GuiButtonController.Sounds`.
+	Button hover/click sounds are resolved by name from `SoundService.GuiSounds`
+	through a shared `Framework.Util.Sound` handler.
 
-	Studio: add the `Button` tag to any `GuiButton`. Optional `SizeFactor`
-	attribute (number) per button. Put `Click` / `Hover` `Sound`s under a
-	`SoundService.GuiSounds` folder.
+	Studio setup: tag buttons with `Button`, optionally set `SizeFactor`, and
+	put `Click` / `Hover` sounds under `SoundService.GuiSounds`.
 ]=]
 
 local Players = game:GetService("Players")
@@ -27,7 +24,6 @@ local GUI_SOUNDS_FOLDER = "GuiSounds"
 local GuiButtonController = {}
 
 GuiButtonController._trove = nil :: Framework.Trove?
--- The sound handler UI buttons play through; assign volume / mute on it.
 GuiButtonController.Sounds = nil :: Framework.SoundPlayer?
 
 function GuiButtonController:Start()

@@ -1,11 +1,9 @@
 --!strict
 --[=[
 	@module Util.AssetPreloader
-	A `Promise`-based wrapper over `ContentProvider:PreloadAsync`. Hand it a
-	list of `Instance`s (their asset-bearing properties are resolved
-	automatically) or raw content ids, await the promise, and drive a loading
-	bar off the `Progress` signal. Counts accumulate across calls, so one
-	preloader can back a whole loading screen.
+	Promise wrapper over `ContentProvider:PreloadAsync`. Pass Instances or raw
+	content ids, await the promise, and use `Progress` for loading UI. Counts
+	accumulate across calls, so one preloader can back a whole loading screen.
 
 	```lua
 	local AssetPreloader = Framework.AssetPreloader
@@ -51,10 +49,6 @@ export type Preloader = {
 	destroy: (self: Preloader) -> (),
 }
 
---[=[
-	New preloader with its own running tally. Reuse it for every batch that
-	feeds the same progress bar.
-]=]
 function AssetPreloader.new(): Preloader
 	local self = setmetatable({
 		Progress = Signal.new(),
@@ -67,10 +61,8 @@ function AssetPreloader.new(): Preloader
 end
 
 --[=[
-	Preloads `content` and resolves with how many assets this call covered.
-	`PreloadAsync` yields, so the work runs on the promise's own thread;
-	`Progress` / `AssetLoaded` fire as each asset lands. A failure in
-	`PreloadAsync` rejects the promise rather than erroring out.
+	Preloads `content` and resolves with the number of assets covered by this
+	call. `PreloadAsync` failures reject the promise.
 ]=]
 function AssetPreloader.preload(self: Preloader, content: { Content }): Promise<number>
 	local s: any = self
@@ -84,8 +76,7 @@ function AssetPreloader.preload(self: Preloader, content: { Content }): Promise<
 		s._total += count
 		local covered = 0
 		local ok, err = pcall(function()
-			-- `content` may include raw content-id strings, which PreloadAsync
-			-- accepts at runtime even though its typed signature is `{Instance}`.
+			-- Raw content-id strings work at runtime, despite the typed signature.
 			ContentProvider:PreloadAsync(content :: any, function(contentId: string, status: Enum.AssetFetchStatus)
 				covered += 1
 				s._done += 1
@@ -101,10 +92,6 @@ function AssetPreloader.preload(self: Preloader, content: { Content }): Promise<
 	end)
 end
 
---[=[
-	Fraction loaded across every `preload` call, `0`..`1`. Returns `1` before
-	anything has been queued.
-]=]
 function AssetPreloader.getProgress(self: Preloader): number
 	local s: any = self
 	if s._total == 0 then

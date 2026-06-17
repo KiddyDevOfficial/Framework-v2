@@ -1,9 +1,7 @@
 --!strict
 --[=[
-	Menu frame animation styles for `FrameController`. Position and size
-	are always tweened together with the same easing so the motion feels
-	blended - no bounce or overshoot on scale. Set per-frame via
-	`AnimateStyle` (`default`, `liquid`, `fancy`, `smooth`, `slide`, `drop`).
+	Menu frame animation styles for `FrameController`. Position and size tween
+	together so the motion stays blended. Set per frame with `AnimateStyle`.
 ]=]
 
 local TweenService = game:GetService("TweenService")
@@ -26,11 +24,10 @@ export type Style = {
 
 local FrameStyles = {}
 
--- Quick satisfying close: small dip down + light shrink, mirrors open (Quint).
 local CLOSE_DURATION = 0.11
 local CLOSE_EFFECTS_DURATION = 0.08
 local CLOSE_EASING = Enum.EasingStyle.Quint
-local CLOSE_Y_DELTA = 0.07 -- scale offset below rest (slight drop, not off-screen)
+local CLOSE_Y_DELTA = 0.07
 local CLOSE_SIZE_FACTOR = 0.93
 
 local function resolveSizeFactor(object: GuiObject, factor: number): UDim2

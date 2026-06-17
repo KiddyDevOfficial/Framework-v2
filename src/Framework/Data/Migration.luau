@@ -1,29 +1,21 @@
 --!strict
 --[=[
 	@module Data.Migration
-	Schema versioning for persisted player data. You keep an ordered list of
-	migrators; migrator `i` upgrades data from version `i-1` to version `i`, so
-	the target version is just `#migrations`. A version number is stamped into
-	the data under `versionKey` (default `_dataVersion`).
+	Schema versioning for persisted player data. Migrator `i` upgrades data
+	from version `i - 1` to version `i`; `#migrations` is the target version.
+	The version is stored under `versionKey` (default `_dataVersion`).
 
-	On load the framework reads the stored version (missing / non-number counts
-	as `0` - i.e. a profile saved before you added versioning) and runs every
-	migrator from there up to the target, bumping the stamp after each step.
-	Migrations run **before** ProfileStore's template reconcile, so they reshape
-	the old data first and reconcile then fills in any newly-added template
-	defaults.
+	Migrations run before ProfileStore reconcile, so old data is reshaped before
+	new template defaults are filled in.
 
 	```lua
-	-- in your DataService options
 	Migrations = {
-	    -- v0 -> v1: split a single "name" field into first / last
 	    function(data)
 	        local first, last = string.match(data.name or "", "(%S+)%s*(.*)")
 	        data.firstName = first or data.name
 	        data.lastName = last
 	        data.name = nil
 	    end,
-	    -- v1 -> v2: coins moved under a wallet table
 	    function(data)
 	        data.wallet = { coins = data.coins or 0 }
 	        data.coins = nil
@@ -31,9 +23,8 @@
 	}
 	```
 
-	New players start already at the target version: the framework stamps the
-	template with `#migrations` at init, so a fresh profile (a copy of the
-	template) needs no migration.
+	New profiles start at the target version because the template is stamped at
+	init.
 ]=]
 
 local Migration = {}
@@ -57,9 +48,6 @@ function Migration.keyOf(config: Config): string
 	return config.versionKey or DEFAULT_VERSION_KEY
 end
 
---[=[
-	The version a fully-migrated profile ends up at - the number of migrators.
-]=]
 function Migration.targetVersion(config: Config): number
 	return #config.migrations
 end
@@ -73,10 +61,8 @@ local function readVersion(data: any, key: string): number
 end
 
 --[=[
-	Runs the outstanding migrators on `data` in place and updates the version
-	stamp. Returns where it started, where it ended, and how many ran. A
-	migrator that errors aborts the run at that version (the stamp reflects the
-	last step that succeeded) and the error is re-raised to the caller.
+	Runs outstanding migrators in place. If one errors, the stamp stays at the
+	last successful version and the error is re-raised.
 ]=]
 function Migration.run(data: any, config: Config): Result
 	assert(type(data) == "table", "[Data.Migration] data must be a table")
@@ -96,8 +82,7 @@ function Migration.run(data: any, config: Config): Result
 end
 
 --[=[
-	Stamps `template[versionKey]` with the target version unless it's already
-	set, so brand-new profiles (copies of the template) start fully migrated.
+	Stamps fresh profiles at the target version.
 ]=]
 function Migration.stampTemplate(template: any, config: Config)
 	local key = Migration.keyOf(config)

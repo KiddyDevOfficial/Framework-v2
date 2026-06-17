@@ -1,16 +1,14 @@
 --!strict
 --[=[
 	@module Networking
-	Shared typed networking layer. Packets get grouped into **Banks**;
-	each packet is one of:
+	Shared typed networking. Packets are grouped into banks:
 	  * `Event<Args>`            - reliable `RemoteEvent`
 	  * `UnreliableEvent<Args>`  - `UnreliableRemoteEvent`
 	  * `Request<Args, Return>`  - `RemoteFunction`
 
-	Define a bank once in a shared module, require it on both sides:
+	Define a bank once in shared code and require it on both sides:
 
 	```lua
-	-- src/shared/Networks/PlayerNet.luau
 	local Networking = require(ReplicatedStorage.Framework).Networking
 	local Bank = Networking.Bank("Player")
 
@@ -27,7 +25,6 @@
 	```lua
 	local Net = require(ReplicatedStorage.Shared.Networks.PlayerNet)
 	Net.UpdateField:OnServerEvent(function(player, args)
-	    -- args: { Field: string, Value: any }
 	end)
 	Net.GetSnapshot:OnServerInvoke(function(player, _args)
 	    return collectSnapshot(player)
@@ -41,10 +38,9 @@
 	local snap = Net.GetSnapshot:InvokeServer(nil)
 	```
 
-	At runtime, bank folders and remotes get deterministic obfuscated
-	Instance names; your code still uses the logical bank / packet names.
-	Server creates each remote lazily; client `WaitForChild`s it the first
-	time the bank is required, so require order is safe.
+	Runtime Instance names are deterministic and obfuscated; code keeps using
+	the logical bank and packet names. Server creates remotes lazily, and the
+	client waits for them when the bank is required.
 ]=]
 
 local Bank = require(script.Bank)

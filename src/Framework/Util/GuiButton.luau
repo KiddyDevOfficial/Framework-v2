@@ -1,21 +1,16 @@
 --!strict
 --[=[
 	@module Util.GuiButton
-	Hover / press size tweens and optional GUI sounds for `GuiButton`
-	instances tagged `"Button"` through CollectionService.
+	Hover/press tweens and optional GUI sounds for `GuiButton`s tagged
+	`"Button"`.
 
-	Sounds are routed through the [`Sound`](./Sound.luau) handler - they're
-	played *by name* from a sound library, so each press is a fresh clone (no
-	cutting itself off) and volume flows through the handler's groups. By
-	default it uses an internal handler pointed at `SoundService.GuiSounds`;
-	pass `soundPlayer` to share your own handler - e.g. the client
-	`SoundController`'s `.Player` - so button sounds sit under the same master
-	/ group volume as the rest of the game.
+	Sounds route through `Util.Sound` by name. By default the helper looks for
+	`SoundService.GuiSounds`; pass `soundPlayer` to share your own handler and
+	volume groups.
 
 	Studio setup:
 	  - Tag any `GuiButton` with `Button` (CollectionService tag).
-	  - Optional `SizeFactor` attribute (number, default `1.08`) sets the
-	    hover scale for that button.
+	  - Optional numeric `SizeFactor` attribute sets the hover scale.
 	  - For the default handler, add a `SoundService.GuiSounds` folder with
 	    `Click` and `Hover` `Sound` children.
 
@@ -25,7 +20,6 @@
 	GuiButton.bind(shopButton)
 	GuiButton.bindIn(playerGui:WaitForChild("HUD"))
 
-	-- route button sounds through the SoundController's handler + volume groups
 	local SoundController = require(StarterPlayerScripts.Client.Controllers.SoundController)
 	GuiButton.bindTagged({ soundPlayer = SoundController.Player, soundGroup = "UI" })
 	```
@@ -122,8 +116,7 @@ local function tweenSize(button: GuiButton, newSize: UDim2, tweenInfo: TweenInfo
 end
 
 --[=[
-	Binds hover and click feedback to one `GuiButton`. Returns a `Trove` that
-	disconnects everything on `:destroy()`.
+	Binds hover and click feedback to one `GuiButton`.
 ]=]
 function GuiButtonUtil.bind(button: GuiButton, options: Options?): Trove.Trove
 	local opts: Options = options or {}
@@ -247,23 +240,18 @@ local function watchTagged(
 end
 
 --[=[
-	Binds every tagged `GuiButton` under `root`. Returns a trove that owns the
-	per-button troves and watches for tag changes.
+	Binds tagged `GuiButton`s under `root`.
 ]=]
 function GuiButtonUtil.bindIn(root: Instance, options: Options?): Trove.Trove
 	return watchTagged(root, options)
 end
 
---[=[
-	Binds every `GuiButton` tagged `Button` in the place.
-]=]
 function GuiButtonUtil.bindTagged(options: Options?): Trove.Trove
 	return watchTagged(nil, options)
 end
 
 --[=[
-	Binds a single button, the tagged descendants of a container, or every
-	tagged button in an array of instances.
+	Binds a button, a container's tagged descendants, or a list of instances.
 ]=]
 function GuiButtonUtil.bindAny(target: GuiButton | Instance | { Instance }, options: Options?): Trove.Trove?
 	if typeof(target) == "Instance" then

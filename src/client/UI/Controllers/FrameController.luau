@@ -1,10 +1,9 @@
 --!strict
 --[=[
 	@module FrameController
-	Drives open / close animations for UI frames under `PlayerGui/Frames`.
-	See `UI/Lib/FrameStyles` for animation presets. Per-frame interaction
-	logic lives in `UI/Frames/*` (e.g. `ExampleFrame`). Only one frame may be
-	open at a time - opening one instantly closes any other visible frame.
+	Opens and closes frames under `PlayerGui/Frames`. Animation presets live in
+	`UI/Lib/FrameStyles`; per-frame interaction can live in `UI/Frames/*`.
+	Only one frame stays open at a time.
 
 	```lua
 	local Frames = require(StarterPlayerScripts.Client.UI.Controllers.FrameController)
@@ -74,9 +73,7 @@ function FrameController:_cancelTweens(frame: GuiObject?)
 	table.clear(self._tweens)
 end
 
--- Accumulates tweens for a frame. A single Open/Close runs multiple `play`
--- calls (frame motion + camera/blur effects); they must not cancel each other.
--- Callers explicitly `_cancelTweens(frame)` before starting a new animation.
+-- One open/close can start motion and effects tweens separately; keep them grouped.
 function FrameController:_trackTweens(frame: GuiObject, tweens: { Tween }, onComplete: ((Enum.PlaybackState) -> ())?)
 	local list = self._tweens[frame]
 	if not list then
@@ -151,8 +148,7 @@ function FrameController:_makeContext(
 	applyEffects: boolean,
 	onComplete: ((Enum.PlaybackState) -> ())?
 ): FrameStyles.AnimContext
-	-- `onComplete` (the post-close hide) must fire once, bound to the first
-	-- (frame motion) tween only - not the shorter effects tweens.
+	-- Post-close hide belongs to the frame tween, not the shorter effects tweens.
 	local completeUsed = false
 	local play = function(tweens: { Tween }, complete: ((Enum.PlaybackState) -> ())?)
 		local cb = complete

@@ -2,16 +2,14 @@
 --[=[
 	@module Types
 	Functional utility types: `Option<T>`, `Result<T, E>`, and tagged-union
-	helpers. These are plain tables (no metatables), so they replicate
-	cleanly through RemoteEvents and survive a JSON round-trip.
+	helpers. They are plain tables, so they replicate cleanly and survive a
+	JSON round-trip.
 
 	Build them with the helpers (`Some`, `None`, `Ok`, `Err`); inspect with
 	the `is*` predicates and the small map / unwrap utilities.
 ]=]
 
 local Types = {}
-
--- Option<T>
 
 export type Option<T> = {
 	kind: "Some",
@@ -36,9 +34,6 @@ function Types.isNone<T>(opt: Option<T>): boolean
 	return opt.kind == "None"
 end
 
---[=[
-	Inner value, or `default` when the option is `None`
-]=]
 function Types.unwrapOr<T>(opt: Option<T>, default: T): T
 	if opt.kind == "Some" then
 		return opt.value
@@ -46,9 +41,6 @@ function Types.unwrapOr<T>(opt: Option<T>, default: T): T
 	return default
 end
 
---[=[
-	Inner value, or errors with `message` when `None`
-]=]
 function Types.expect<T>(opt: Option<T>, message: string): T
 	if opt.kind == "Some" then
 		return opt.value
@@ -62,8 +54,6 @@ function Types.mapOption<T, U>(opt: Option<T>, mapper: (T) -> U): Option<U>
 	end
 	return { kind = "None" } :: Option<U>
 end
-
--- Result<T, E>
 
 export type Result<T, E> = {
 	kind: "Ok",
@@ -111,7 +101,7 @@ function Types.mapErr<T, E, F>(r: Result<T, E>, mapper: (E) -> F): Result<T, F>
 end
 
 --[=[
-	Runs `fn` and wraps the outcome in a `Result`; anything thrown becomes the `Err`
+	Runs `fn` and wraps thrown errors as `Err`.
 ]=]
 function Types.tryCall<T>(fn: () -> T): Result<T, string>
 	local ok, value = pcall(fn)
@@ -121,11 +111,8 @@ function Types.tryCall<T>(fn: () -> T): Result<T, string>
 	return { kind = "Err", error = tostring(value) }
 end
 
--- Generic helpers
-
 --[=[
-	Asserts `value` is non-nil at runtime and hands it back typed as
-	non-optional, so downstream code can drop the `?`
+	Asserts non-nil at runtime and narrows the type.
 ]=]
 function Types.expectNonNil<T>(value: T?, message: string?): T
 	if value == nil then
@@ -134,7 +121,6 @@ function Types.expectNonNil<T>(value: T?, message: string?): T
 	return value :: T
 end
 
--- Reserved key for tagging the "type" of a structurally-typed table
 export type Discriminant = string
 
 return Types

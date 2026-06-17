@@ -1,9 +1,9 @@
 --!strict
 --[=[
 	@module Util.Spring
-	Spring interpolation - use it instead of fixed tweens for camera follow,
-	UI bounce, recoil, anything that chases a value. Drive it from a
-	`Heartbeat` / `RenderStep` hook by calling `:step(dt)`.
+	Spring interpolation for values that chase a target: camera follow, UI
+	bounce, recoil, and similar motion. Drive it by calling `:step(dt)` from
+	`Heartbeat` or `RenderStep`.
 
 	The integrator is the semi-implicit damped harmonic oscillator (Allen
 	Chou) - unconditionally stable, so big `dt` spikes won't blow up. Works
@@ -23,10 +23,9 @@
 	    workspace.CurrentCamera.CFrame = CFrame.new(camera:step(dt))
 	end)
 
-	-- A bouncy UI value:
 	local scale = Spring.new(1, 6, 0.4)
 	button.MouseButton1Click:Connect(function()
-	    scale:impulse(2)   -- kick the velocity for a pop
+	    scale:impulse(2)
 	end)
 	```
 ]=]
@@ -60,21 +59,18 @@ local function magnitude(value: any): number
 	if type(value) == "number" then
 		return math.abs(value)
 	end
-	-- Vector2 / Vector3
 	return value.Magnitude
 end
 
 --[=[
-	New spring resting at `initial`. `frequency` defaults to `4`, `dampingRatio`
-	to `1` (critically damped). Value type comes from `initial` - must be a
-	`number`, `Vector2`, or `Vector3`.
+	New spring resting at `initial`. `frequency` defaults to `4` and
+	`dampingRatio` to `1` (critically damped).
 ]=]
 function Spring.new<T>(initial: T, frequency: number?, dampingRatio: number?): Spring<T>
 	local zero: any = initial
 	if type(initial) == "number" then
 		zero = 0
 	else
-		-- Vector types
 		zero = (initial :: any) - (initial :: any)
 	end
 

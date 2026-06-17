@@ -1,10 +1,8 @@
 --!strict
 --[=[
 	@module Networking.Stats
-	Opt-in counters for the typed networking layer. Every `Event` /
-	`UnreliableEvent` / `Request` reports each send and receive here, but only
-	when stats are enabled - when they're off, `record` is a single boolean read
-	and an early return, so the hot path stays cheap.
+	Opt-in counters for typed networking. Events and requests report sends and
+	receives here only while stats are enabled, keeping the normal path cheap.
 
 	Counts are **logical packet operations**, not bytes: one `FireServer` /
 	`FireAllClients` / `InvokeServer` is one outgoing op, one handler invocation
@@ -15,11 +13,10 @@
 	local Stats = Framework.Networking.Stats
 
 	Stats.setEnabled(true)
-	-- ... play for a bit ...
 	local snap = Stats.snapshot()
-	print(snap.outgoing, snap.incoming)   -- totals since the last reset
+	print(snap.outgoing, snap.incoming)
 	for key, packet in snap.perPacket do
-	    print(key, packet.outgoing, packet.incoming)   -- "Bank.Packet"
+	    print(key, packet.outgoing, packet.incoming)
 	end
 	Stats.reset()
 	```
@@ -57,8 +54,7 @@ local function bucket(bank: string, name: string): PacketStat
 end
 
 --[=[
-	Records `count` (default 1) operations on `bank.name` in `direction`.
-	No-ops instantly while stats are disabled.
+	Records packet operations. No-ops while stats are disabled.
 ]=]
 function Stats.record(bank: string, name: string, direction: Direction, count: number?)
 	if not enabled then
@@ -83,8 +79,7 @@ function Stats.isEnabled(): boolean
 end
 
 --[=[
-	Cloned point-in-time copy of the counters. Safe to read / iterate without
-	racing later mutations.
+	Cloned point-in-time copy of the counters.
 ]=]
 function Stats.snapshot(): Snapshot
 	local packets: { [string]: PacketStat } = {}
@@ -100,8 +95,7 @@ function Stats.snapshot(): Snapshot
 end
 
 --[=[
-	Zeroes every counter. Call it on an interval to turn the running totals
-	into a per-window rate (e.g. ops/sec).
+	Zeroes every counter; useful for per-window rates.
 ]=]
 function Stats.reset()
 	totalOut = 0

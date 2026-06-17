@@ -1,15 +1,11 @@
 --!strict
 --[=[
 	@module Util.Input
-	A device-agnostic action map. You bind named actions to one or more
-	buttons (`Enum.KeyCode` for keyboard / gamepad, `Enum.UserInputType` for
-	mouse buttons), then listen for the *action* instead of wiring raw
-	`UserInputService` events everywhere. Rebinding is a one-liner, an action
-	can have several bindings at once, and the map tracks the current input
-	device so you can swap button prompts.
+	Device-agnostic action maps. Bind named actions to keyboard/gamepad keys or
+	mouse buttons, then listen for actions instead of raw `UserInputService`
+	events. Rebinding and prompt swaps stay in one place.
 
-	Client-only in practice - it connects to `UserInputService`, which never
-	fires on the server, so `Began` / `Ended` simply stay quiet there.
+	On the server the map simply stays quiet.
 
 	```lua
 	local Input = Framework.Input
@@ -22,12 +18,10 @@
 	    character:jump()
 	end)
 
-	-- query state directly when you need it per-frame
 	if map:isDown("Fire") then
 	    weapon:tryShoot()
 	end
 
-	-- let players rebind, and react to controller / KBM swaps
 	map:rebind("Jump", { Enum.KeyCode.W })
 	map.DeviceChanged:connect(function(device)
 	    hud:setPromptStyle(device)        -- "KeyboardMouse" | "Gamepad" | "Touch"
@@ -49,25 +43,18 @@ type Connection = Signal.Connection
 local Input = {}
 Input.__index = Input
 
--- Anything you can bind: keyboard / gamepad buttons are `KeyCode`s, mouse
--- buttons are `UserInputType`s.
 export type Button = Enum.KeyCode | Enum.UserInputType
 
 export type Device = "KeyboardMouse" | "Gamepad" | "Touch"
 
 export type Options = {
-	-- Skip inputs the engine already consumed (e.g. typing in a TextBox).
-	-- Defaults to true. Release (`Ended`) events are always processed so a
-	-- held action can never get stuck "down".
+	-- Defaults to true. Release events still run so actions cannot get stuck.
 	ignoreProcessed: boolean?,
 }
 
 export type InputMap = {
-	-- (action, inputObject) when an action goes from up to down.
 	Began: Signal<string, InputObject>,
-	-- (action, inputObject) when an action's last held button releases.
 	Ended: Signal<string, InputObject>,
-	-- Fires when the active input device category changes.
 	DeviceChanged: Signal<Device>,
 	bind: (self: InputMap, action: string, buttons: { Button }) -> InputMap,
 	rebind: (self: InputMap, action: string, buttons: { Button }) -> InputMap,
@@ -104,8 +91,8 @@ local function deviceOf(inputType: Enum.UserInputType): Device
 end
 
 --[=[
-	New, empty action map. Pass `{ ignoreProcessed = false }` to also act on
-	inputs Roblox already consumed (UI clicks, chat typing).
+	New, empty action map. Use `{ ignoreProcessed = false }` if UI-consumed
+	inputs should still trigger actions.
 ]=]
 function Input.new(options: Options?): InputMap
 	local opts: Options = options or {}

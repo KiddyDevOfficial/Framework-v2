@@ -1,12 +1,10 @@
 --!strict
 --[=[
 	@module Util.Sound
-	A small sound handler. Point it at a folder of template `Sound` instances
-	(your "sound library"), then play them by name - as 2D UI sounds, at a world
-	position, or parented to an instance. Each playback is a clone, so the same
-	sound can overlap itself; non-looping clones clean themselves up when they
-	finish. Volume is organised through lazily-created `SoundGroup`s nested under
-	one master group, so `setMasterVolume` scales everything.
+	Small sound handler for named `Sound` templates. It can play 2D sounds, 3D
+	positional sounds, or sounds parented to an instance. Each play is a clone,
+	so sounds can overlap, and volume flows through managed `SoundGroup`s under
+	one master group.
 
 	```lua
 	local Sound = Framework.Sound
@@ -77,8 +75,7 @@ export type SoundPlayer = {
 }
 
 --[=[
-	New sound handler. Assign a library now via `options.library` or later with
-	`:setLibrary`.
+	New sound handler. Set a library with `options.library` or `:setLibrary`.
 ]=]
 function Sound.new(options: Options?): SoundPlayer
 	local opts: Options = options or {}
@@ -138,9 +135,7 @@ local function applyProps(self: any, sound: Sound, props: PlayProps)
 	sound.SoundGroup = resolveGroup(self, props)
 end
 
--- Parents, plays, and (for non-looping sounds) schedules cleanup of `owned`
--- once playback ends. `owned` is what gets disposed - the sound itself for 2D /
--- on-instance playback, or the holder part for positional playback.
+-- `owned` may be the sound clone or the hidden 3D holder part.
 local function startSound(self: any, sound: Sound, parent: Instance, owned: Instance): Sound
 	sound.Parent = parent
 	self._active:add(owned)
@@ -156,8 +151,7 @@ local function startSound(self: any, sound: Sound, parent: Instance, owned: Inst
 end
 
 --[=[
-	Assigns the folder of template `Sound`s. Names are resolved against it
-	recursively, so subfolders are fine.
+	Assigns the template folder. Lookup is recursive.
 ]=]
 function Sound.setLibrary(self: SoundPlayer, folder: Instance)
 	assert(typeof(folder) == "Instance", "[Sound] library must be an Instance")
@@ -174,9 +168,7 @@ function Sound.hasLibrary(self: SoundPlayer): boolean
 end
 
 --[=[
-	The template `Sound` registered under `name`, or `nil` if the library is
-	unset or has no such sound. This is the shared template - clone it (or use
-	`:play`) rather than playing it directly.
+	The shared template `Sound` for `name`, if one exists.
 ]=]
 function Sound.get(self: SoundPlayer, name: string): Sound?
 	local library = (self :: any)._library
@@ -201,8 +193,7 @@ local function clone(self: SoundPlayer, name: string): Sound?
 end
 
 --[=[
-	Plays `name` as a 2D sound (parented to the default parent / SoundService).
-	Returns the playing clone, or `nil` if it couldn't be resolved.
+	Plays `name` as a 2D sound and returns the clone.
 ]=]
 function Sound.play(self: SoundPlayer, name: string, props: PlayProps?): Sound?
 	local sound = clone(self, name)
@@ -214,8 +205,7 @@ function Sound.play(self: SoundPlayer, name: string, props: PlayProps?): Sound?
 end
 
 --[=[
-	Plays `name` parented to `parent` (a part for 3D falloff, an Attachment,
-	etc.). The clone lives and dies with this player, not with `parent`.
+	Plays `name` under `parent`. The clone is cleaned up by this handler.
 ]=]
 function Sound.playOn(self: SoundPlayer, name: string, parent: Instance, props: PlayProps?): Sound?
 	local sound = clone(self, name)
@@ -227,8 +217,7 @@ function Sound.playOn(self: SoundPlayer, name: string, parent: Instance, props: 
 end
 
 --[=[
-	Plays `name` at a world position or on a `BasePart`. For a `Vector3` an
-	invisible anchored holder part is spawned and cleaned up with the sound.
+	Plays `name` at a world position or on a `BasePart`.
 ]=]
 function Sound.playAt(self: SoundPlayer, name: string, target: Vector3 | BasePart, props: PlayProps?): Sound?
 	if typeof(target) == "Instance" then
@@ -260,16 +249,14 @@ function Sound.stop(self: SoundPlayer, sound: Sound)
 end
 
 --[=[
-	Stops and disposes every sound this player started (one-shots and loops
-	alike). The library, groups and volume settings are untouched.
+	Stops sounds started by this player. Library and volume settings stay intact.
 ]=]
 function Sound.stopAll(self: SoundPlayer)
 	(self :: any)._active:clean()
 end
 
 --[=[
-	The managed `SoundGroup` named `name`, created lazily under the master group
-	(so master volume scales it). Reuses an existing child of that name.
+	The managed `SoundGroup` named `name`, created under the master group.
 ]=]
 function Sound.getGroup(self: SoundPlayer, name: string): SoundGroup
 	local s: any = self
@@ -308,10 +295,6 @@ function Sound.getMasterVolume(self: SoundPlayer): number
 	return (self :: any)._masterVolume
 end
 
---[=[
-	Mutes / unmutes everything by zeroing the master group, restoring the prior
-	master volume on unmute.
-]=]
 function Sound.setMuted(self: SoundPlayer, muted: boolean)
 	local s: any = self
 	if s._muted == muted then

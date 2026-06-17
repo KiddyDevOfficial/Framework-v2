@@ -2,7 +2,7 @@
 --[=[
 	@module Framework
 	
-	The pieces:
+	Main entry point:
 	  * `CreateService`     - server singleton modules (`:Init`, `:Start`, ...).
 	  * `CreateController`  - client singleton modules.
 	  * `CreateComponent`   - per-`Instance` modules bound by tag.
@@ -28,9 +28,8 @@
 	                          `StateMachine`, `Input`, `AssetPreloader`,
 	                          `GuiButton` (also re-exported at top level).
 
-	Fetching a unit: every framework module already returns its typed
-	singleton, so just `require` it directly - no `Framework.GetService(name)`
-	annotation needed.
+	Every framework module returns its typed singleton, so require the unit you
+	need directly.
 
 	```lua
 	local DataService = require(ServerScriptService.Server.Services.DataService)

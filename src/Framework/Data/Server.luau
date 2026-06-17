@@ -1,16 +1,15 @@
 --!strict
 --[=[
 	@module Data.Server
-	Server side singleton. Gives every `Player` a `Profile` (persistence)
-	and a `Data` (reactive tree), and pushes mutations back to the owning
-	client over a single RemoteEvent.
+	Server-side singleton for player profiles and replicated data. Each player
+	gets a persistent `Profile` and a reactive `Data` tree, with mutations sent
+	to their client over one RemoteEvent.
 
-	Public surface follows `leifstout/dataservice`'s server module
-	(`:init`, `:get`, `:set`, `:update`, `:arrayInsert`, `:arrayRemove`,
-	`:waitForData`, ...) so the framework adapter is just a pass-through.
+	The public surface follows `leifstout/dataservice` (`:init`, `:get`,
+	`:set`, `:update`, `:arrayInsert`, `:arrayRemove`, `:waitForData`, ...)
+	so the framework adapter can stay thin.
 
-	Method names are camelCase on purpose; the adapter calls them as
-	`self._server:<method>`.
+	Method names stay camelCase because the adapter forwards directly to them.
 ]=]
 
 local Players = game:GetService("Players")
@@ -67,10 +66,7 @@ local function keyForUserId(self: any, userId: number | string): string
 	return prefix .. tostring(userId)
 end
 
--- Fan a ProfileStore message out to the matching `addGlobalCallback` handlers.
--- Messages are tagged `{ key = <callbackKey>, data = <payload> }` by
--- `sendGlobalMessage`. We drop the message from the queue once at least one
--- handler returns `true`.
+-- ProfileStore messages are only consumed after a handler explicitly accepts them.
 local function dispatchGlobalMessage(self: any, player: Player, message: any, processed: () -> ())
 	if type(message) ~= "table" or type(message.key) ~= "string" then
 		processed()
@@ -94,7 +90,6 @@ local function dispatchGlobalMessage(self: any, player: Player, message: any, pr
 	end
 end
 
--- Per-player setup
 local function attachPlayer(self: any, player: Player)
 	local opts: Options = self.options
 	local userId = opts.overridenUserId or opts.viewedUserId or player.UserId
@@ -105,8 +100,7 @@ local function attachPlayer(self: any, player: Player)
 	end
 
 	local mode: "session" | "view" = if opts.viewedUserId or opts.dontSave then "view" else "session"
-	-- Bail on the session attempt if the player leaves while we're waiting out
-	-- a session conflict from another server.
+	-- Stop waiting on a contested session once the player leaves.
 	local cancel = function()
 		return not player:IsDescendantOf(Players)
 	end
@@ -118,9 +112,7 @@ local function attachPlayer(self: any, player: Player)
 
 	profile:AddUserId(userId)
 
-	-- Upgrade the saved schema before reconcile fills template defaults. A
-	-- brand-new profile (empty Data) skips migration and starts stamped at the
-	-- target version; existing data runs the outstanding migrators.
+	-- Run migrations before template reconcile fills new defaults.
 	local migration = self._migration
 	if migration then
 		local data = profile.Data
@@ -136,7 +128,6 @@ local function attachPlayer(self: any, player: Player)
 
 	profile:Reconcile()
 
-	-- Pipe ProfileStore's cross-server queue into addGlobalCallback.
 	profile:setMessageHandler(function(message: any, processed: () -> ())
 		dispatchGlobalMessage(self, player, message, processed)
 	end)
@@ -205,9 +196,8 @@ local function detachPlayer(self: any, player: Player)
 end
 
 --[=[
-	One-shot bootstrap. Opens the DataStore (or the mock), sets up the
-	network plumbing, and hooks `PlayerAdded` / `PlayerRemoving` plus a
-	`BindToClose` flush. Call this once.
+	One-shot bootstrap. Opens the store, sets up networking, connects player
+	lifecycle events, and adds the close-time flush.
 ]=]
 function Server.init(self: any, options: Options)
 	assert(RunService:IsServer(), "DataService.Server can only be initialised on the server")
@@ -218,9 +208,7 @@ function Server.init(self: any, options: Options)
 	self._initialized = true
 	self.options = options
 
-	-- Bind schema migrations and stamp the template so fresh profiles start at
-	-- the target version. Done before openStore since ProfileStore captures the
-	-- template at store creation.
+	-- Stamp before opening the store; ProfileStore captures the template.
 	if options.migrations and #options.migrations > 0 then
 		local config: Migration.Config = {
 			migrations = options.migrations,
@@ -267,9 +255,7 @@ function Server.init(self: any, options: Options)
 end
 
 --[=[
-	Overridable hook. Runs right after a player's profile loads but before
-	the initial snapshot goes out to their client. Set it before `:init`
-	(or just override `Server.onPlayerInit` directly).
+	Override to adjust a freshly-loaded profile before the first client snapshot.
 ]=]
 function Server.onPlayerInit(_self: any, _player: Player, _data: any) end
 
@@ -374,9 +360,7 @@ function Server.resetData(self: any, player: Player)
 	local key = keyForUserId(self, player.UserId)
 	local profile = self._profiles[player]
 	if profile then
-		-- End the session first (flushes + releases the lock), then wipe the
-		-- key once it's fully ended - otherwise the final save can race the
-		-- removal and re-create the data.
+		-- Wipe after release so the final save cannot recreate the key.
 		profile.OnSessionEnd:connect(function()
 			Profile.removeKey(self.store, key)
 		end)
@@ -387,14 +371,12 @@ function Server.resetData(self: any, player: Player)
 	player:Kick("Your data has been reset - please rejoin.")
 end
 
------ Cross-server messaging (backed by ProfileStore's message queue) -----
+----- Cross-server messaging -----
 
 --[=[
-	Registers a handler for global messages sent to a player's profile under
-	`key`. Return `true` once you've processed the message so ProfileStore
-	drops it from the queue. Handlers fire both for messages that land while
-	the player is in this server and for ones queued while they were offline
-	(those get delivered on their next session).
+	Registers a handler for messages sent to a player's profile under `key`.
+	Return `true` after processing so ProfileStore drops the message. Queued
+	offline messages run on the player's next session.
 ]=]
 function Server.addGlobalCallback(self: any, key: string, callback: GlobalCallback)
 	assert(type(key) == "string", "DataService.Server.addGlobalCallback: key must be a string")
@@ -408,9 +390,8 @@ function Server.addGlobalCallback(self: any, key: string, callback: GlobalCallba
 end
 
 --[=[
-	Posts a global message to the profile owned by `userId`, no matter which
-	server (if any) has it loaded right now. Returns whether the message got
-	queued.
+	Queues a message on the profile owned by `userId`, even if another server
+	has the profile loaded.
 ]=]
 function Server.sendGlobalMessage(self: any, key: string, userId: number | string, data: { any }): boolean
 	return Profile.sendMessage(self.store, keyForUserId(self, userId), { key = key, data = data })

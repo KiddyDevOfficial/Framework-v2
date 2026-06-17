@@ -1,12 +1,13 @@
 --!strict
 --[=[
-	Shared helpers for UI frame interaction controllers under `UI/Frames`.
+	Shared helpers for frame interaction controllers under `UI/Frames`.
 
-	Studio button wiring (optional):
+	Optional button attributes:
 	  - `FrameTarget` (string) - frame name under `PlayerGui/Frames`
 	  - `FrameAction` (string) - `Open`, `Close`, or `Toggle` (default)
 
-	Or pass `GuiButton` instances directly to `wireOpen` / `wireClose` / `wireToggle`.
+	You can also pass buttons directly to `wireOpen`, `wireClose`, or
+	`wireToggle`.
 ]=]
 
 local FrameUtil = {}
@@ -77,7 +78,7 @@ end
 
 --[=[
 	Wires every `GuiButton` under `root` that has a `FrameTarget` attribute.
-	Pass `filterFrameName` to limit wiring to one frame (e.g. `"Example"`).
+	Use `filterFrameName` to bind one frame's controls.
 ]=]
 function FrameUtil.wireAttributed(
 	root: Instance,

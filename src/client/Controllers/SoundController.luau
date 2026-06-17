@@ -29,7 +29,7 @@ local SoundService = game:GetService("SoundService")
 local Framework = require(ReplicatedStorage:WaitForChild("Framework"))
 local Sound = Framework.Util.Sound
 
-type PlayProps = Framework.SoundPlayProps
+export type PlayProps = Framework.SoundPlayProps
 
 local player = Sound.new()
 

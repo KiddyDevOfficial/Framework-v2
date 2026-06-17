@@ -1,10 +1,8 @@
 --!strict
 --[=[
 	@module Monetization.Client
-	Client side of monetization. Fires purchase prompts, turns the
-	purchase-finished events into signals your UI can listen on, and caches
-	game-pass ownership / product info so we're not hitting the marketplace
-	over and over.
+	Client-side monetization helpers. Fires purchase prompts, exposes finished
+	events as signals, and caches ownership/product info.
 ]=]
 
 local MarketplaceService = game:GetService("MarketplaceService")
@@ -21,11 +19,8 @@ end
 type ClientClass = Types.ClientClass
 
 local Client = {
-	-- (productId, wasPurchased)
 	ProductPurchaseFinished = Signal.new(),
-	-- (gamePassId, wasPurchased)
 	GamePassPurchaseFinished = Signal.new(),
-	-- (subscriptionId, didTryPurchasing)
 	SubscriptionPurchaseFinished = Signal.new(),
 
 	_gamePassCache = {} :: { [number]: boolean },
@@ -39,9 +34,6 @@ local function warnOnce(message: string)
 	warn("[Monetization.Client] " .. message)
 end
 
---[=[
-	Connects the marketplace prompt-finished callbacks. Call once.
-]=]
 function Client.init(self: ClientClass)
 	if self._initialized then
 		return
@@ -103,7 +95,7 @@ function Client.promptSubscriptionPurchase(self: ClientClass, subscriptionId: st
 end
 
 --[=[
-	`UserOwnsGamePassAsync` for the local player, cached.
+	Cached game-pass ownership for the local player.
 ]=]
 function Client.ownsGamePass(self: ClientClass, gamePassId: number): boolean
 	local cached = self._gamePassCache[gamePassId]
@@ -124,7 +116,7 @@ function Client.ownsGamePass(self: ClientClass, gamePassId: number): boolean
 end
 
 --[=[
-	`GetProductInfo`, cached. `infoType` defaults to `Enum.InfoType.Product`.
+	Cached `GetProductInfo`; defaults to `Enum.InfoType.Product`.
 ]=]
 function Client.getProductInfo(self: ClientClass, assetId: number, infoType: Enum.InfoType?): any
 	local kind = infoType or Enum.InfoType.Product
@@ -147,8 +139,7 @@ function Client.getProductInfo(self: ClientClass, assetId: number, infoType: Enu
 end
 
 --[=[
-	`GetSubscriptionProductInfoAsync`, cached (client-only; localized pricing).
-	Status checks have to run on the server via `Monetization.server:getUserSubscriptionStatus`.
+	Cached subscription product info. Status checks still belong on the server.
 ]=]
 function Client.getSubscriptionProductInfo(self: ClientClass, subscriptionId: string): any?
 	local cached = self._subscriptionInfoCache[subscriptionId]

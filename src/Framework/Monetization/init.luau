@@ -1,15 +1,12 @@
 --!strict
 --[=[
 	@module Monetization
-	A monetization layer over `MarketplaceService`. Covers dev products
-	(consumables), game passes (one-time unlocks), and experience
-	subscriptions behind a typed, signal-driven API. No Wally deps.
+	Typed `MarketplaceService` helpers for developer products, game passes, and
+	experience subscriptions.
 
-	Split into per-realm singletons, like the `Data` subsystem:
-	  * `Monetization.server` - the `ProcessReceipt` owner, product handlers,
-	    ownership cache, server-side prompts.
-	  * `Monetization.client` - prompt helpers, cached ownership / product
-	    info, purchase-finished signals for UI.
+	Split by realm, like `Data`:
+	  * `Monetization.server` owns receipts, handlers, caches, and server prompts.
+	  * `Monetization.client` owns prompt helpers and purchase-finished signals.
 
 	Server:
 	```lua
@@ -17,13 +14,11 @@
 	Monetization:init()
 
 	Monetization:registerProduct(123456, function(player, receipt)
-	    -- grant the consumable; return true once it's saved
 	    addGems(player, 100)
 	    return true
 	end)
 
 	if Monetization:ownsGamePass(player, 987654) then
-	    -- unlock VIP perks
 	end
 	```
 

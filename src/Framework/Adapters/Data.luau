@@ -1,9 +1,8 @@
 --!strict
 --[=[
 	@module Adapters.Data
-	Framework-native bindings for the built-in DataService
-	(`src/Framework/Data/`). Two factories that hand back ready-to-register
-	framework units:
+	Framework bindings for the built-in DataService. The factories return
+	ready-to-register units:
 
 	  * `Data.CreateService(options)`    - a `Framework.CreateService` table
 	    that calls `DataService.server:init(...)` in its `Init` hook.
@@ -11,12 +10,10 @@
 	    that calls `DataService.client:init()` in its `Start` hook (init yields
 	    until the server pushes the initial snapshot).
 
-	Both forward the underlying API as PascalCase methods so they read like
-	the rest of the framework.
+	Both forward the underlying API as PascalCase methods.
 
-	`CreateDataService<T>` / `CreateDataController<T>` take a template type
-	`T` (usually `DataTemplate.DataTemplate`) so `:Get` / `:Update` path
-	arguments autocomplete off your schema.
+	Pass a template type `T` so `:Get` / `:Update` paths autocomplete from your
+	schema.
 ]=]
 
 local RunService = game:GetService("RunService")
@@ -45,9 +42,7 @@ export type ServerOptions<T = { [string]: any }> = {
 	DontSave: boolean?,
 	ResetData: boolean?,
 	OnPlayerInit: ((self: any, player: Player, data: T) -> ())?,
-	-- Ordered schema migrators; migrator `i` upgrades v(i-1) -> v(i).
 	Migrations: { DataMigrator }?,
-	-- Field the schema version is stamped under (default `_dataVersion`).
 	DataVersionKey: string?,
 }
 
@@ -58,9 +53,8 @@ export type ClientOptions<T = { [string]: any }> = {
 }
 
 --[=[
-	Public API for `Framework.CreateDataService<T>(...)`. For full path
-	autocomplete, require your game `DataService` module (the one that sets
-	`T` from `DataTemplate`); don't go through `Framework.GetService("DataService")`.
+	Public API for `Framework.CreateDataService<T>(...)`. For path autocomplete,
+	require your game `DataService` module directly.
 ]=]
 export type ServerClass<T = { [string]: any }, TPath = AnyPath, TArrayPath = AnyArrayPath> = {
 	Server: (self: ServerClass<T, TPath, TArrayPath>) -> any,

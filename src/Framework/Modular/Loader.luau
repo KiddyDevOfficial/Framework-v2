@@ -2,9 +2,9 @@
 --[=[
 	@module Loader
 	Finds modular units (services, controllers, components), sorts them by
-	dependency, runs every `Init`, then spawns every `Start`, and wires the
-	per-frame hooks to `RunService`. Services run server-only, controllers
-	client-only; components run wherever they're registered.
+	dependency, runs `Init`, spawns `Start`, and wires frame hooks. Services run
+	on the server, controllers on the client, and components wherever they are
+	registered.
 
 	Server entry point:
 	```lua
@@ -118,13 +118,6 @@ local function loadFolder(folder: Instance, handler: (any, ModuleScript) -> ())
 	end
 end
 
---[=[
-	Require every `ModuleScript` under `folder` (recursively) and register
-	whatever table it returns. Plain tables get stamped as services,
-	controllers, or components based on which `Add*` API you used. Tables
-	that are already stamped (e.g. from `CreateDataService`) pass straight
-	through.
-]=]
 function Loader.AddIn(folder: Instance)
 	loadFolder(folder, function(value, moduleScript)
 		if type(value) ~= "table" then
@@ -169,12 +162,9 @@ end
 
 
 --[=[
-	String-keyed lookup for a registered service. Prefer
-	`require(path.to.Service)` for fully-typed access - every framework
-	unit module returns its typed singleton. Use this only when you have to
-	be dynamic (introspection, debug tools, plugin code).
+	String-keyed lookup for a registered service. Prefer direct `require` for
+	typed access; use this for dynamic cases like debug tools.
 
-	Generic `T` lets you annotate the receiver for a cast without `::`.
 	Example:
 	```lua
 	local Data: DataServiceModule.Class = Framework.GetService("DataService")
@@ -187,8 +177,7 @@ function Loader.GetService<T>(name: string): T
 end
 
 --[=[
-	String-keyed lookup for a registered controller - see `GetService` for
-	the typed alternative we'd rather you use (`require(...)` directly).
+	String-keyed lookup for a registered controller.
 ]=]
 function Loader.GetController<T>(name: string): T
 	local c = state.controllers[name]
@@ -197,8 +186,7 @@ function Loader.GetController<T>(name: string): T
 end
 
 --[=[
-	String-keyed lookup for a component *definition* table - prefer a direct
-	`require` of the component module.
+	String-keyed lookup for a component definition.
 ]=]
 function Loader.GetComponent<T>(name: string): T
 	local c = state.components[name]
@@ -208,8 +196,7 @@ end
 
 --[=[
 	Returns the per-instance component table for a specific `Instance`, or
-	`nil` if it isn't mounted right now. Generic in `T`: annotate with the
-	component's `Class` type for autocomplete.
+	`nil` if it is not mounted.
 
 	```lua
 	local plot: PlotModule.Class? = Framework.GetComponentInstance("Plot", model)
@@ -224,8 +211,7 @@ function Loader.GetComponentInstance<T>(name: string, instance: Instance): T?
 end
 
 --[=[
-	Returns every currently-mounted instance of the named component as an
-	array. Generic in `T`; order is undefined.
+	Returns every currently-mounted instance of the named component.
 ]=]
 function Loader.GetComponentInstances<T>(name: string): { T }
 	local c = state.components[name]
@@ -469,9 +455,7 @@ end
 
 
 --[=[
-	Inits every registered service / controller in dependency order, then
-	spawns `Start` for each, binds the frame hooks, and mounts every tagged
-	component. Idempotent.
+	Starts registered units in dependency order and mounts tagged components.
 ]=]
 function Loader.Start()
 	if state.started or state.starting then
@@ -527,8 +511,7 @@ function Loader.Start()
 end
 
 --[=[
-	Disconnects every live connection and calls `Stop` on every module and
-	every component instance as it unmounts them. Idempotent.
+	Disconnects live hooks and calls `Stop` while unmounting.
 ]=]
 function Loader.Stop()
 	if not state.started then
@@ -587,8 +570,7 @@ function Loader.IsStarted(): boolean
 end
 
 --[=[
-	Runs `callback` after `Start()` finishes. If the framework already
-	started, it's `task.spawn`'d right away.
+	Runs `callback` after `Start()` finishes, or immediately if already started.
 ]=]
 function Loader.OnStart(callback: () -> ())
 	assert(type(callback) == "function", "Framework.OnStart: callback must be a function")
