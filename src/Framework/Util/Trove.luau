@@ -16,6 +16,8 @@
 	```
 ]=]
 
+local RunService = game:GetService("RunService")
+
 local Trove = {}
 Trove.__index = Trove
 
@@ -31,10 +33,13 @@ export type Cleanable =
 
 export type Trove = {
 	add: <T>(self: Trove, object: T) -> T,
+	connect: (self: Trove, signal: RBXScriptSignal, callback: (...any) -> ()) -> RBXScriptConnection,
+	bindToRenderStep: (self: Trove, name: string, priority: number, callback: (number) -> ()) -> (),
 	remove: (self: Trove, object: any) -> boolean,
 	extend: (self: Trove) -> Trove,
 	clean: (self: Trove) -> (),
 	destroy: (self: Trove) -> (),
+	attachToInstance: (self: Trove, instance: Instance) -> (),
 	isDestroyed: (self: Trove) -> boolean,
 }
 
@@ -65,6 +70,7 @@ function Trove.new(): Trove
 	return setmetatable({
 		_objects = {},
 		_destroyed = false,
+		_instance = nil :: Instance?,
 	}, Trove) :: any
 end
 
@@ -73,6 +79,35 @@ function Trove.add<T>(self: Trove, object: T): T
 	assert(not s._destroyed, "[Trove] cannot add to destroyed trove")
 	table.insert(s._objects, object)
 	return object
+end
+
+function Trove.connect(self: Trove, signal: RBXScriptSignal, callback: (...any) -> ()): RBXScriptConnection
+	return self:add(signal:Connect(callback))
+end
+
+function Trove.bindToRenderStep(self: Trove, name: string, priority: number, callback: (number) -> ())
+	RunService:BindToRenderStep(name, priority, callback)
+	self:add(function()
+		RunService:UnbindFromRenderStep(name)
+	end)
+end
+
+function Trove.attachToInstance(self: Trove, instance: Instance)
+	local s: any = self
+	if s._destroyed then
+		error("[Trove] Cannot attach destroyed Trove to instance")
+	end
+	if s._instance then
+		if s._instance == instance then
+			return
+		else
+			error("[Trove] Trove already attached to another instance")
+		end
+	end
+	s._instance = instance
+	instance.Destroying:Once(function()
+		self:destroy()
+	end)
 end
 
 function Trove.remove(self: Trove, object: any): boolean
