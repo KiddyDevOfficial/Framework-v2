@@ -1,6 +1,6 @@
 # Goling's Framework
 
-Goling's Framework is a type-first toolkit for Roblox games. It takes the stuff you end up rewriting on every project — service bootstrapping, player data, typed remotes, monetization hooks — and folds it into one Luau package with no classes, no inheritance, and no external dependencies.
+Goling's Framework is a type-first toolkit for Roblox games. It takes the stuff you end up rewriting on every project service bootstrapping, player data, typed remotes, monetization hooks and folds it into one Luau package with no classes, no inheritance, and no external dependencies easier for your games.
 
 If you've written the same singleton loader one too many times and just want to get to the fun part, this is for you.
 
