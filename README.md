@@ -1,6 +1,6 @@
 # Goling's Framework
 
-Goling's Framework is a type-first toolkit for Roblox games. It takes the stuff you end up rewriting on every project service bootstrapping, player data, typed remotes, monetization hooks and folds it into one Luau package with no classes, no inheritance, and no external dependencies easier for your games.
+Goling's Framework is a type-first toolkit for Roblox games. It takes the stuff you end up rewriting on every project (service bootstrapping, player data, typed remotes, monetization hooks) and folds it into one Luau package with no classes, no inheritance, and no external dependencies.
 
 If you've written the same singleton loader one too many times and just want to get to the fun part, this is for you.
 
@@ -93,13 +93,13 @@ Framework.AddComponents(ReplicatedStorage.Shared.Components)
 Framework.Start()
 ```
 
-`Framework.AddIn(folder)` is a shortcut that scans a folder and registers whatever it finds — services, controllers, or components.
+`Framework.AddIn(folder)` is a shortcut that scans a folder and registers whatever it finds: services, controllers, or components.
 
 That's enough to boot. Nothing interesting happens until you add modules. Let's fix that.
 
 ### A simple service
 
-A service is just a table the framework calls on a schedule. No metatables, no base class — `self` is always that same table.
+A service is just a table the framework calls on a schedule. No metatables, no base class. `self` is always that same table.
 
 ```lua
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -127,7 +127,7 @@ Drop that in your `Services` folder and the loader picks it up automatically. `N
 
 ### A controller
 
-Controllers are the client-side twin of services — same shape, same lifecycle hooks, just only runs when `RunService:IsClient()`.
+Controllers are the client-side twin of services: same shape, same lifecycle hooks, just only runs when `RunService:IsClient()`.
 
 ```lua
 local HudController = Framework.CreateController({
@@ -205,7 +205,7 @@ local HudController = Framework.GetController("HudController")
 local turret        = Framework.GetComponentInstance("Turret", workspace.SomeModel)
 ```
 
-**Tip:** prefer `require(path.to.YourService)` over `GetService("YourService")` when you can — Luau will infer your methods without casts.
+**Tip:** prefer `require(path.to.YourService)` over `GetService("YourService")` when you can, so Luau will infer your methods without casts.
 
 ---
 
@@ -219,7 +219,7 @@ Goling's Framework is a **gameplay framework**, not an ECS or a custom replicati
 | **Loader** | Discovery, dependency sorting, bootstrap. |
 | **DataService** | Persistent, replicated player data via vendored [ProfileStore](https://github.com/MadStudioRoblox/ProfileStore). |
 | **Networking** | Typed remote banks (`Event`, `UnreliableEvent`, `Request`). |
-| **Monetization** | `MarketplaceService` wrapper — products, passes, subscriptions. |
+| **Monetization** | `MarketplaceService` wrapper for products, passes, and subscriptions. |
 | **GlobalMessaging** | Cross-server [MessagingService](https://create.roblox.com/docs/reference/engine/classes/MessagingService) topics. |
 | **FFlags** | Live runtime flags synced across servers. |
 | **Leaderstats** | Mirrors `DataService` paths into leaderstats folders. |
@@ -250,7 +250,7 @@ Everything lives on the root `Framework` table:
 
 ## Player data
 
-The built-in DataService gives you a per-player reactive `Data` tree (path reads/writes + change signals) with a single replication channel under `ReplicatedStorage/_FrameworkDataService`. Persistence is handled by [ProfileStore](https://github.com/MadStudioRoblox/ProfileStore) (vendored in-tree) — session locking, auto-save, template reconciliation, and `BindToClose` flushing all come for free.
+The built-in DataService gives you a per-player reactive `Data` tree (path reads/writes + change signals) with a single replication channel under `ReplicatedStorage/_FrameworkDataService`. Persistence is handled by [ProfileStore](https://github.com/MadStudioRoblox/ProfileStore) (vendored in-tree), so session locking, auto-save, template reconciliation, and `BindToClose` flushing all come for free.
 
 ### Server
 
@@ -283,7 +283,7 @@ DataService:Update(player, "currency", function(c) return c + 100 end)
 DataService:GetChangedSignal(player, "currency"):connect(function(new) print(new) end)
 ```
 
-Define your schema once in `Shared/DataTemplate.luau` — `export type DataTemplate` drives compile-time path autocomplete on both server and client.
+Define your schema once in `Shared/DataTemplate.luau`. The `export type DataTemplate` there drives compile-time path autocomplete on both server and client.
 
 ### Client
 
@@ -363,7 +363,7 @@ Net.UpdateField:FireServer({ Field = "currency", Value = 100 })
 local snap = Net.GetSnapshot:InvokeServer(nil)
 ```
 
-Opt into traffic counters with `Networking.Stats` — useful for spotting remotes that fire too often. `DebugOverlay` turns this on automatically while visible.
+Opt into traffic counters with `Networking.Stats`, useful for spotting remotes that fire too often. `DebugOverlay` turns this on automatically while visible.
 
 ---
 
@@ -385,7 +385,7 @@ Products.Products = {
 }
 ```
 
-The shipped `MonetizationService` auto-registers every list entry on `:Init`. Game pass handlers should be **idempotent** — they run on purchase *and* when a player joins if they already own the pass.
+The shipped `MonetizationService` auto-registers every list entry on `:Init`. Game pass handlers should be **idempotent**: they run on purchase *and* when a player joins if they already own the pass.
 
 ```lua
 local Monetization = require(ServerScriptService.Server.Services.MonetizationService)
@@ -443,7 +443,7 @@ Values update automatically whenever data changes through `DataService`.
 
 ## Global signals
 
-Lightweight in-process events for modules in the same server or client VM. Not remotes — use `Networking` for client/server and `GlobalMessaging` for cross-server.
+Lightweight in-process events for modules in the same server or client VM. Not remotes. Use `Networking` for client/server and `GlobalMessaging` for cross-server.
 
 ```lua
 local GlobalSignals = require(ReplicatedStorage.Framework).GlobalSignals
@@ -465,7 +465,7 @@ Signals.RoundStarted:fire("Arena")
 
 Re-exported on `Framework` and grouped under `Framework.Util`. A few you'll reach for often:
 
-**Trove** — connection and instance cleanup:
+**Trove** for connection and instance cleanup:
 
 ```lua
 local trove = Framework.Trove.new()
@@ -473,7 +473,7 @@ trove:add(workspace.ChildAdded:Connect(...))
 -- trove:destroy() disconnects everything
 ```
 
-**StateMachine** — typed finite state machines with per-entity `group` support:
+**StateMachine** for typed finite state machines with per-entity `group` support:
 
 ```lua
 local fsm = Framework.StateMachine.new({
@@ -487,7 +487,7 @@ local fsm = Framework.StateMachine.new({
 fsm:transition("Active")
 ```
 
-**Spring** — physics-based interpolation for camera follow, UI bounce, recoil:
+**Spring** for physics-based interpolation (camera follow, UI bounce, recoil):
 
 ```lua
 local cam = Framework.Spring.new(Vector3.zero, 4, 1)
@@ -495,7 +495,7 @@ cam:setTarget(targetPosition)
 -- call cam:step(dt) each frame
 ```
 
-**Input** — device-agnostic action map with rebind support. The shipped `InputController` wraps a shared map as a singleton.
+**Input** is a device-agnostic action map with rebind support. The shipped `InputController` wraps a shared map as a singleton.
 
 | Module | Purpose |
 | --- | --- |
@@ -517,7 +517,7 @@ cam:setTarget(targetPosition)
 
 ## Core primitives
 
-**Signal** — generic, type-safe events. Handlers run on independent threads; one erroring listener never blocks the rest.
+**Signal** provides generic, type-safe events. Handlers run on independent threads; one erroring listener never blocks the rest.
 
 ```lua
 local s: Framework.Signal.Signal<string> = Framework.Signal.new()
@@ -525,9 +525,9 @@ s:connect(function(msg) print(msg) end)
 s:fire("hello")
 ```
 
-**Types** — `Option<T>` and `Result<T, E>` for explicit absence and error handling.
+**Types** include `Option<T>` and `Result<T, E>` for explicit absence and error handling.
 
-**Enum** — immutable, comparable enumerations. **Symbol** — opaque identity tokens.
+**Enum** gives you immutable, comparable enumerations. **Symbol** provides opaque identity tokens.
 
 ---
 
@@ -551,9 +551,9 @@ src/
 └── shared/                 ← DataTemplate, Networks, Lists, Components, …
 ```
 
-- `default.project.json` — dev place, mounts Framework + starter folders.
-- `package.project.json` — library-only build for `rojo build`.
-- `wally.toml` — package metadata (`kiddydevofficial/framework`).
+- `default.project.json`: dev place, mounts Framework + starter folders.
+- `package.project.json`: library-only build for `rojo build`.
+- `wally.toml`: package metadata (`kiddydevofficial/framework`).
 
 ---
 
@@ -591,4 +591,4 @@ Built and maintained by [KiddyDevOfficial](https://github.com/KiddyDevOfficial).
 
 ## License
 
-MIT — see [LICENSE](LICENSE).
+MIT. See [LICENSE](LICENSE).
