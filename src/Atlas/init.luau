@@ -38,6 +38,7 @@
 
 	Typical server entry point:
 	```lua
+
 	local Atlas = require(game:GetService("ReplicatedStorage").Atlas)
 
 	Atlas.AddServices(script.Parent.Services)
@@ -215,7 +216,8 @@ export type LeaderstatEntry = Leaderstats.Entry
 export type Trove = Util.Trove
 export type Timer = Util.Timer
 export type Promise<T> = Util.Promise<T>
-export type Observer<T> = Util.Observer<T>
+export type ObserverCleanup = Util.ObserverCleanup
+export type ObserverStop = Util.ObserverStop
 export type StateMachine<D> = Util.StateMachine<D>
 export type StateConfig<D> = Util.StateConfig<D>
 export type StateContext<D> = Util.StateContext<D>

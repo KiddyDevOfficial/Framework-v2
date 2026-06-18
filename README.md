@@ -501,7 +501,7 @@ cam:setTarget(targetPosition)
 | --- | --- |
 | `Trove` | Connection/instance cleanup. |
 | `Promise` | Lightweight async promises. |
-| `Observer` | Typed observable values. |
+| `Observer` | Observer functions (`observeTag`, `observeProperty`, `observeAttribute`, `observeChildren`, `observePlayer`, `observeCharacter`). |
 | `StateMachine` | Finite state machines + per-key groups. |
 | `Spring` | Damped harmonic oscillator for smooth motion. |
 | `Queue` / `Cache` | FIFO queue and LRU/TTL memoization. |
