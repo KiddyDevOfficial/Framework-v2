@@ -1,7 +1,7 @@
 --!strict
 --[=[
 	@controller AssetPreloaderController
-	Singleton wrapper around `Weave.Util.AssetPreloader` - one shared
+	Singleton wrapper around `Atlas.Util.AssetPreloader` - one shared
 	preloader for the whole client. Feed it batches of assets, watch `Progress`
 	to drive a loading bar. Counts accumulate across calls, so a loading screen
 	can preload in several passes and still show one combined bar.
@@ -27,11 +27,11 @@
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
-local Weave = require(ReplicatedStorage:WaitForChild("Weave"))
-local AssetPreloader = Weave.Util.AssetPreloader
+local Atlas = require(ReplicatedStorage:WaitForChild("Atlas"))
+local AssetPreloader = Atlas.Util.AssetPreloader
 
-type Content = Weave.PreloadContent
-type Promise<T> = Weave.Promise<T>
+type Content = Atlas.PreloadContent
+type Promise<T> = Atlas.Promise<T>
 
 local preloader = AssetPreloader.new()
 

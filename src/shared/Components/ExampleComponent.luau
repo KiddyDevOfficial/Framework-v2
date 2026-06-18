@@ -10,7 +10,7 @@
 	```lua
 	local ExampleComponent = require(ReplicatedStorage.Shared.Components.ExampleComponent)
 	local inst: ExampleComponent.Class? =
-	    Weave.GetComponentInstance("ExampleComponent", someInstance)
+	    Atlas.GetComponentInstance("ExampleComponent", someInstance)
 	```
 ]=]
 

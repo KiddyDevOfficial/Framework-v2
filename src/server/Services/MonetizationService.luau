@@ -18,15 +18,15 @@
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
-local Weave = require(ReplicatedStorage:WaitForChild("Weave"))
+local Atlas = require(ReplicatedStorage:WaitForChild("Atlas"))
 local Lists = ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Lists")
 local Products = require(Lists.Products)
 local GamePasses = require(Lists.GamePasses)
 local Players = game:GetService("Players")
 
-export type Class = Weave.MonetizationServiceClass
+export type Class = Atlas.MonetizationServiceClass
 
-local MonetizationService: Class = Weave.CreateMonetizationService({
+local MonetizationService: Class = Atlas.CreateMonetizationService({
 	Name = "MonetizationService",
 })
 

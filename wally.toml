@@ -1,11 +1,11 @@
 [package]
-name = "kiddydevofficial/weave"
+name = "kiddydevofficial/atlas"
 version = "0.4.0"
-description = "Weave: type-first, modular :Init/:Start framework for Roblox / Luau"
+description = "Atlas: type-first, modular :Init/:Start framework for Roblox / Luau"
 license = "MIT"
 authors = ["KiddyDevOfficial"]
 registry = "https://github.com/UpliftGames/wally-index"
 realm = "shared"
-include = ["src/Weave/**", "README.md", "LICENSE", "wally.toml", "default.project.json"]
+include = ["src/Atlas/**", "README.md", "LICENSE", "wally.toml", "default.project.json"]
 
 [dependencies]

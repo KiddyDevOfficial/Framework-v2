@@ -18,8 +18,8 @@
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
-local Weave = require(ReplicatedStorage:WaitForChild("Weave"))
-local GlobalSignals = Weave.GlobalSignals
+local Atlas = require(ReplicatedStorage:WaitForChild("Atlas"))
+local GlobalSignals = Atlas.GlobalSignals
 
 local Bank = GlobalSignals.Bank("Example")
 
@@ -30,6 +30,6 @@ export type PlayerStateChangedArgs = {
 }
 
 return {
-	--RoundStarted = Bank:Signal("RoundStarted") :: Weave.GlobalSignal<string>,
-	--PlayerStateChanged = Bank:Signal("PlayerStateChanged") :: Weave.GlobalSignal<PlayerStateChangedArgs>,
+	--RoundStarted = Bank:Signal("RoundStarted") :: Atlas.GlobalSignal<string>,
+	--PlayerStateChanged = Bank:Signal("PlayerStateChanged") :: Atlas.GlobalSignal<PlayerStateChangedArgs>,
 }

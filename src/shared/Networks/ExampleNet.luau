@@ -14,8 +14,8 @@
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
-local Weave = require(ReplicatedStorage:WaitForChild("Weave"))
-local Networking = Weave.Networking
+local Atlas = require(ReplicatedStorage:WaitForChild("Atlas"))
+local Networking = Atlas.Networking
 
 local Bank = Networking.Bank("Example")
 
@@ -25,6 +25,6 @@ export type EchoResponse = {
 }
 
 return {
-	--Ping = Bank:Event("Ping") :: Weave.NetworkEvent<string>,
-	--Echo = Bank:Request("Echo") :: Weave.NetworkRequest<string, EchoResponse>,
+	--Ping = Bank:Event("Ping") :: Atlas.NetworkEvent<string>,
+	--Echo = Bank:Request("Echo") :: Atlas.NetworkRequest<string, EchoResponse>,
 }

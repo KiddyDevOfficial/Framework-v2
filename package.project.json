@@ -1,6 +1,6 @@
 {
-  "name": "Weave",
+  "name": "Atlas",
   "tree": {
-    "$path": "src/Weave"
+    "$path": "src/Atlas"
   }
 }

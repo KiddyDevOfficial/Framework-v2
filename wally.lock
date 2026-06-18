@@ -3,6 +3,6 @@
 registry = "test"
 
 [[package]]
-name = "kiddydevofficial/weave"
+name = "kiddydevofficial/atlas"
 version = "0.4.0"
 dependencies = []

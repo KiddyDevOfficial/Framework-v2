@@ -1,11 +1,11 @@
 {
-  "name": "Weave",
+  "name": "Atlas",
   "tree": {
     "$className": "DataModel",
 
     "ReplicatedStorage": {
-      "Weave": {
-        "$path": "src/Weave"
+      "Atlas": {
+        "$path": "src/Atlas"
       },
       "Shared": {
         "$path": "src/shared"

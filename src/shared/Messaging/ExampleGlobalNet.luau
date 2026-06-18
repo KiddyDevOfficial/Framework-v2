@@ -17,8 +17,8 @@
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
-local Weave = require(ReplicatedStorage:WaitForChild("Weave"))
-local GlobalMessaging = Weave.GlobalMessaging
+local Atlas = require(ReplicatedStorage:WaitForChild("Atlas"))
+local GlobalMessaging = Atlas.GlobalMessaging
 
 local Bank = GlobalMessaging.Bank("Example")
 
@@ -33,6 +33,6 @@ export type AnnouncementPayload = {
 }
 
 return {
-	--Gift = Bank:Event("Gift") :: Weave.GlobalMessageTopic<GiftPayload>,
-	--Announcement = Bank:Event("Announcement") :: Weave.GlobalMessageTopic<AnnouncementPayload>,
+	--Gift = Bank:Event("Gift") :: Atlas.GlobalMessageTopic<GiftPayload>,
+	--Announcement = Bank:Event("Announcement") :: Atlas.GlobalMessageTopic<AnnouncementPayload>,
 }

@@ -18,7 +18,7 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 
-local Weave = require(ReplicatedStorage:WaitForChild("Weave"))
+local Atlas = require(ReplicatedStorage:WaitForChild("Atlas"))
 local DataTemplate = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("DataTemplate"))
 
 type PlayerData = DataTemplate.DataTemplate
@@ -27,10 +27,10 @@ type PlayerDataArrayPath = DataTemplate.ArrayPath
 
 local USE_MOCK = false and RunService:IsStudio()
 
-export type Class = Weave.DataServiceClass<PlayerData, PlayerDataPath, PlayerDataArrayPath>
+export type Class = Atlas.DataServiceClass<PlayerData, PlayerDataPath, PlayerDataArrayPath>
 export type Path = PlayerDataPath
 
-local DataService: Class = Weave.CreateDataService({
+local DataService: Class = Atlas.CreateDataService({
 	Name = "DataService",
 	Template = DataTemplate,
 	ProfileStoreIndex = "PlayerData",

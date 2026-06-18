@@ -16,8 +16,8 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Workspace = game:GetService("Workspace")
 
-local Weave = require(ReplicatedStorage.Weave)
-local Signal = Weave.Signal
+local Atlas = require(ReplicatedStorage.Atlas)
+local Signal = Atlas.Signal
 local FrameStyles = require(script.Parent.Parent.Lib.FrameStyles)
 
 local MENU_FOV_ATTR = "_MenuFOVActive"
@@ -38,13 +38,13 @@ local FrameController = {
 	_camera = nil :: Camera?,
 	_defaultFov = 70,
 
-	Opened = Signal.new() :: Weave.Signal<string>,
-	Closed = Signal.new() :: Weave.Signal<string>,
+	Opened = Signal.new() :: Atlas.Signal<string>,
+	Closed = Signal.new() :: Atlas.Signal<string>,
 }
 
 export type Class = {
-	Opened: Weave.Signal<string>,
-	Closed: Weave.Signal<string>,
+	Opened: Atlas.Signal<string>,
+	Closed: Atlas.Signal<string>,
 	Get: (self: Class, name: string) -> GuiObject?,
 	IsOpen: (self: Class, name: string) -> boolean,
 	Open: (self: Class, name: string) -> (),
@@ -274,12 +274,12 @@ function FrameController:Start()
 	self._camera = Workspace.CurrentCamera or Workspace:WaitForChild("Camera") :: Camera
 	self._defaultFov = self._camera.FieldOfView
 
-	local blur = Lighting:FindFirstChild("_WeaveMenuBlur")
+	local blur = Lighting:FindFirstChild("_AtlasMenuBlur")
 	if blur and blur:IsA("BlurEffect") then
 		self._blur = blur
 	else
 		local created = Instance.new("BlurEffect")
-		created.Name = "_WeaveMenuBlur"
+		created.Name = "_AtlasMenuBlur"
 		created.Size = 0
 		created.Parent = Lighting
 		self._blur = created
