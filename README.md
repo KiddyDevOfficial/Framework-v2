@@ -1,10 +1,10 @@
-# Goling's Framework
+# Weave
 
-Goling's Framework is a type-first toolkit for Roblox games. It takes the stuff you end up rewriting on every project (service bootstrapping, player data, typed remotes, monetization hooks) and folds it into one Luau package with no classes, no inheritance, and no external dependencies.
+Weave is a type-first toolkit for Roblox games. It takes the stuff you end up rewriting on every project (service bootstrapping, player data, typed remotes, monetization hooks) and folds it into one Luau package with no classes, no inheritance, and no external dependencies.
 
 If you've written the same singleton loader one too many times and just want to get to the fun part, this is for you.
 
-Everything you build is just a **table**. Hand the framework a table with `:Init` / `:Start` methods and it handles the rest.
+Everything you build is just a **table**. Hand Weave a table with `:Init` / `:Start` methods and it handles the rest.
 
 ---
 
@@ -21,22 +21,22 @@ From this repo, point the installer at any Rojo project (`.` works for the curre
 
 ```bash
 # macOS / Linux
-chmod +x scripts/install-framework.sh
-./scripts/install-framework.sh /path/to/your-game
+chmod +x scripts/install-weave.sh
+./scripts/install-weave.sh /path/to/your-game
 ```
 
 | Mode | Flag | What it does |
 |------|------|----------------|
-| **wally** (default) | `-Mode wally` | Adds `kiddydevofficial/framework` to `wally.toml`, mounts `Packages` in Rojo, runs `wally install`. |
+| **wally** (default) | `-Mode wally` | Adds `kiddydevofficial/weave` to `wally.toml`, mounts `Packages` in Rojo, runs `wally install`. |
 | **local** | `-Mode local` | Links this repo directly into your project. |
-| **rbxm** | `-Mode rbxm` | Builds `framework.rbxm` into `your-game/vendor/`. |
+| **rbxm** | `-Mode rbxm` | Builds `weave.rbxm` into `your-game/vendor/`. |
 
 Requires [Rojo](https://github.com/rojo-rbx/rojo) and, for Wally modes, [Wally](https://github.com/UpliftGames/wally) on your PATH. Run `aftman install` in this repo to get both.
 
 Then require it:
 
 ```lua
-local Framework = require(game:GetService("ReplicatedStorage").Packages.Framework)
+local Weave = require(game:GetService("ReplicatedStorage").Packages.Weave)
 ```
 
 ### Wally (manual)
@@ -44,68 +44,68 @@ local Framework = require(game:GetService("ReplicatedStorage").Packages.Framewor
 ```toml
 # wally.toml
 [dependencies]
-Framework = "kiddydevofficial/framework@^0.4.0"
+Weave = "kiddydevofficial/weave@^0.4.0"
 ```
 
 ```lua
-local Framework = require(game:GetService("ReplicatedStorage").Packages.Framework)
+local Weave = require(game:GetService("ReplicatedStorage").Packages.Weave)
 ```
 
 ### Rojo (manual)
 
-Drop `src/Framework/` under `ReplicatedStorage` in your project:
+Drop `src/Weave/` under `ReplicatedStorage` in your project:
 
 ```lua
-local Framework = require(game:GetService("ReplicatedStorage").Framework)
+local Weave = require(game:GetService("ReplicatedStorage").Weave)
 ```
 
 ### Standalone build
 
 ```bash
-rojo build package.project.json -o framework.rbxm
+rojo build package.project.json -o weave.rbxm
 ```
 
 ---
 
 ## Basic usage
 
-The pattern is the same on server and client: require the framework, register your modules, call `Start()`.
+The pattern is the same on server and client: require Weave, register your modules, call `Start()`.
 
 **Server:**
 
 ```lua
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local Framework = require(ReplicatedStorage.Framework)
+local Weave = require(ReplicatedStorage.Weave)
 
-Framework.AddServices(script.Parent.Services)
-Framework.AddComponents(ReplicatedStorage.Shared.Components)
-Framework.Start()
+Weave.AddServices(script.Parent.Services)
+Weave.AddComponents(ReplicatedStorage.Shared.Components)
+Weave.Start()
 ```
 
 **Client:**
 
 ```lua
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local Framework = require(ReplicatedStorage.Framework)
+local Weave = require(ReplicatedStorage.Weave)
 
-Framework.AddControllers(script.Parent.Controllers)
-Framework.AddComponents(ReplicatedStorage.Shared.Components)
-Framework.Start()
+Weave.AddControllers(script.Parent.Controllers)
+Weave.AddComponents(ReplicatedStorage.Shared.Components)
+Weave.Start()
 ```
 
-`Framework.AddIn(folder)` is a shortcut that scans a folder and registers whatever it finds: services, controllers, or components.
+`Weave.AddIn(folder)` is a shortcut that scans a folder and registers whatever it finds: services, controllers, or components.
 
 That's enough to boot. Nothing interesting happens until you add modules. Let's fix that.
 
 ### A simple service
 
-A service is just a table the framework calls on a schedule. No metatables, no base class. `self` is always that same table.
+A service is just a table Weave calls on a schedule. No metatables, no base class. `self` is always that same table.
 
 ```lua
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local Framework = require(ReplicatedStorage.Framework)
+local Weave = require(ReplicatedStorage.Weave)
 
-local PlayerService = Framework.CreateService({
+local PlayerService = Weave.CreateService({
     Name = "PlayerService",
     JoinCount = 0,
 })
@@ -130,7 +130,7 @@ Drop that in your `Services` folder and the loader picks it up automatically. `N
 Controllers are the client-side twin of services: same shape, same lifecycle hooks, just only runs when `RunService:IsClient()`.
 
 ```lua
-local HudController = Framework.CreateController({
+local HudController = Weave.CreateController({
     Name = "HudController",
 })
 
@@ -151,7 +151,7 @@ return HudController
 
 Components attach to individual `Instance`s via CollectionService tags. Each tagged instance gets its own lightweight table.
 
-Place modules under `ReplicatedStorage.Shared.Components` and call `Framework.AddComponents(thatFolder)`. The loader stamps `Name` and `Tag` from the module name automatically.
+Place modules under `ReplicatedStorage.Shared.Components` and call `Weave.AddComponents(thatFolder)`. The loader stamps `Name` and `Tag` from the module name automatically.
 
 ```lua
 -- Shared/Components/Turret.luau
@@ -169,14 +169,14 @@ function Turret:Stop() end
 return Turret
 ```
 
-Tag a model in Studio with `"Turret"` and the framework creates a component for it. When the instance is removed, `:Stop` runs and everything cleans up.
+Tag a model in Studio with `"Turret"` and Weave creates a component for it. When the instance is removed, `:Stop` runs and everything cleans up.
 
 ### Dependencies
 
 Services and controllers can declare what they need to load first:
 
 ```lua
-Framework.CreateService({
+Weave.CreateService({
     Name = "ShopService",
     Dependencies = { "DataService", "MonetizationService" },
 })
@@ -193,16 +193,16 @@ The loader topologically sorts modules and errors clearly if you create a cycle.
 | `Heartbeat(self, dt)` | Every `RunService.Heartbeat`. | No |
 | `Stepped(self, dt)` | Physics tick. | No |
 | `RenderStep(self, dt)` | `RenderStepped` (client only). | No |
-| `Stop(self)` | `Framework.Stop()` shutdown. | No |
+| `Stop(self)` | `Weave.Stop()` shutdown. | No |
 
 Components add `Construct(self)` before `Start`, and all frame hooks only run while the instance is mounted.
 
 ### Accessing modules
 
 ```lua
-local PlayerService = Framework.GetService("PlayerService")
-local HudController = Framework.GetController("HudController")
-local turret        = Framework.GetComponentInstance("Turret", workspace.SomeModel)
+local PlayerService = Weave.GetService("PlayerService")
+local HudController = Weave.GetController("HudController")
+local turret        = Weave.GetComponentInstance("Turret", workspace.SomeModel)
 ```
 
 **Tip:** prefer `require(path.to.YourService)` over `GetService("YourService")` when you can, so Luau will infer your methods without casts.
@@ -211,7 +211,7 @@ local turret        = Framework.GetComponentInstance("Turret", workspace.SomeMod
 
 ## What's included
 
-Goling's Framework is a **gameplay framework**, not an ECS or a custom replication engine. It's built for the common case: typed server/client singletons, per-instance components, and player data that just works.
+Weave is a **gameplay framework**, not an ECS or a custom replication engine. It's built for the common case: typed server/client singletons, per-instance components, and player data that just works.
 
 | Piece | What it does |
 | --- | --- |
@@ -231,7 +231,7 @@ Fully `--!strict`. Passes `luau-lsp analyze` with zero warnings.
 
 ### API at a glance
 
-Everything lives on the root `Framework` table:
+Everything lives on the root `Weave` table:
 
 | Category | Key entry points |
 | --- | --- |
@@ -244,26 +244,26 @@ Everything lives on the root `Framework` table:
 | **Leaderstats** | `CreateLeaderstatsService` |
 | **Util** | `Trove`, `Promise`, `StateMachine`, `Spring`, `Input`, `Sound`, `Log`, `DebugOverlay`, … |
 
-> **Runtime note:** generic call syntax like `CreateDataService<T>({ ... })` is type-checker only. At runtime, annotate the result instead: `local svc: Class = Framework.CreateDataService({ ... })`.
+> **Runtime note:** generic call syntax like `CreateDataService<T>({ ... })` is type-checker only. At runtime, annotate the result instead: `local svc: Class = Weave.CreateDataService({ ... })`.
 
 ---
 
 ## Player data
 
-The built-in DataService gives you a per-player reactive `Data` tree (path reads/writes + change signals) with a single replication channel under `ReplicatedStorage/_FrameworkDataService`. Persistence is handled by [ProfileStore](https://github.com/MadStudioRoblox/ProfileStore) (vendored in-tree), so session locking, auto-save, template reconciliation, and `BindToClose` flushing all come for free.
+The built-in DataService gives you a per-player reactive `Data` tree (path reads/writes + change signals) with a single replication channel under `ReplicatedStorage/_WeaveDataService`. Persistence is handled by [ProfileStore](https://github.com/MadStudioRoblox/ProfileStore) (vendored in-tree), so session locking, auto-save, template reconciliation, and `BindToClose` flushing all come for free.
 
 ### Server
 
 ```lua
 -- server/Services/DataService.luau
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local Framework = require(ReplicatedStorage.Framework)
+local Weave = require(ReplicatedStorage.Weave)
 local DataTemplate = require(ReplicatedStorage.Shared.DataTemplate)
 
 type PlayerData = DataTemplate.DataTemplate
-export type Class = Framework.DataServiceClass<PlayerData, DataTemplate.Path, DataTemplate.ArrayPath>
+export type Class = Weave.DataServiceClass<PlayerData, DataTemplate.Path, DataTemplate.ArrayPath>
 
-local DataService: Class = Framework.CreateDataService({
+local DataService: Class = Weave.CreateDataService({
     Name = "DataService",
     Template = DataTemplate,
     ProfileStoreIndex = "PlayerData",
@@ -289,7 +289,7 @@ Define your schema once in `Shared/DataTemplate.luau`. The `export type DataTemp
 
 ```lua
 -- client/Controllers/DataController.luau
-return Framework.CreateDataController({
+return Weave.CreateDataController({
     Name = "DataController",
     Template = require(ReplicatedStorage.Shared.DataTemplate),
 })
@@ -306,7 +306,7 @@ print("currency:", Data:Get("currency"))
 When you change saved data after launch, register `Migrations` so old profiles upgrade on load:
 
 ```lua
-Framework.CreateDataService({
+Weave.CreateDataService({
     Template = DataTemplate,
     Migrations = {
         -- v0 -> v1
@@ -341,7 +341,7 @@ Define remotes once in a shared module, require on server and client. Remote ins
 
 ```lua
 -- Shared/Networks/PlayerNet.luau
-local Networking = require(ReplicatedStorage.Framework).Networking
+local Networking = require(ReplicatedStorage.Weave).Networking
 local Bank = Networking.Bank("Player")
 
 export type UpdateFieldArgs = { Field: string, Value: any }
@@ -402,7 +402,7 @@ On the client, `CreateMonetizationController` exposes prompt helpers and purchas
 **GlobalMessaging** wraps [MessagingService](https://create.roblox.com/docs/reference/engine/classes/MessagingService) for cross-server topics. Delivery is best-effort; payloads must stay under 1 KB. Define topics in banks, same pattern as Networking:
 
 ```lua
-local GlobalMessaging = require(ReplicatedStorage.Framework).GlobalMessaging
+local GlobalMessaging = require(ReplicatedStorage.Weave).GlobalMessaging
 local Bank = GlobalMessaging.Bank("Events")
 
 return {
@@ -446,7 +446,7 @@ Values update automatically whenever data changes through `DataService`.
 Lightweight in-process events for modules in the same server or client VM. Not remotes. Use `Networking` for client/server and `GlobalMessaging` for cross-server.
 
 ```lua
-local GlobalSignals = require(ReplicatedStorage.Framework).GlobalSignals
+local GlobalSignals = require(ReplicatedStorage.Weave).GlobalSignals
 local Bank = GlobalSignals.Bank("Game")
 
 return {
@@ -463,12 +463,12 @@ Signals.RoundStarted:fire("Arena")
 
 ## Utilities
 
-Re-exported on `Framework` and grouped under `Framework.Util`. A few you'll reach for often:
+Re-exported on `Weave` and grouped under `Weave.Util`. A few you'll reach for often:
 
 **Trove** for connection and instance cleanup:
 
 ```lua
-local trove = Framework.Trove.new()
+local trove = Weave.Trove.new()
 trove:add(workspace.ChildAdded:Connect(...))
 -- trove:destroy() disconnects everything
 ```
@@ -476,7 +476,7 @@ trove:add(workspace.ChildAdded:Connect(...))
 **StateMachine** for typed finite state machines with per-entity `group` support:
 
 ```lua
-local fsm = Framework.StateMachine.new({
+local fsm = Weave.StateMachine.new({
     initial = "Idle",
     data = { ticks = 0 },
     states = {
@@ -490,7 +490,7 @@ fsm:transition("Active")
 **Spring** for physics-based interpolation (camera follow, UI bounce, recoil):
 
 ```lua
-local cam = Framework.Spring.new(Vector3.zero, 4, 1)
+local cam = Weave.Spring.new(Vector3.zero, 4, 1)
 cam:setTarget(targetPosition)
 -- call cam:step(dt) each frame
 ```
@@ -520,7 +520,7 @@ cam:setTarget(targetPosition)
 **Signal** provides generic, type-safe events. Handlers run on independent threads; one erroring listener never blocks the rest.
 
 ```lua
-local s: Framework.Signal.Signal<string> = Framework.Signal.new()
+local s: Weave.Signal.Signal<string> = Weave.Signal.new()
 s:connect(function(msg) print(msg) end)
 s:fire("hello")
 ```
@@ -535,7 +535,7 @@ s:fire("hello")
 
 ```
 src/
-├── Framework/              ← the package
+├── Weave/                  ← the package
 │   ├── Modular/            ← Service, Controller, Component, Loader
 │   ├── Data/               ← player data + vendored ProfileStore
 │   ├── Networking/         ← typed remote banks
@@ -551,9 +551,9 @@ src/
 └── shared/                 ← DataTemplate, Networks, Lists, Components, …
 ```
 
-- `default.project.json`: dev place, mounts Framework + starter folders.
+- `default.project.json`: dev place, mounts Weave + starter folders.
 - `package.project.json`: library-only build for `rojo build`.
-- `wally.toml`: package metadata (`kiddydevofficial/framework`).
+- `wally.toml`: package metadata (`kiddydevofficial/weave`).
 
 ---
 
@@ -561,7 +561,7 @@ src/
 
 ```bash
 rojo serve              # dev place to Studio
-rojo build package.project.json -o framework.rbxm
+rojo build package.project.json -o weave.rbxm
 ```
 
 Type-checking (requires [luau-lsp](https://github.com/JohnnyMorganz/luau-lsp)):
@@ -580,7 +580,7 @@ wally publish  # from repo root
 
 ```toml
 [dependencies]
-Framework = "kiddydevofficial/framework@^0.4.0"
+Weave = "kiddydevofficial/weave@^0.4.0"
 ```
 
 ---

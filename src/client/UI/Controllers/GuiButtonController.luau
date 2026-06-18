@@ -5,7 +5,7 @@
 	picked up at runtime.
 
 	Button hover/click sounds are resolved by name from `SoundService.GuiSounds`
-	through a shared `Framework.Util.Sound` handler.
+	through a shared `Weave.Util.Sound` handler.
 
 	Studio setup: tag buttons with `Button`, optionally set `SizeFactor`, and
 	put `Click` / `Hover` sounds under `SoundService.GuiSounds`.
@@ -15,16 +15,16 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local SoundService = game:GetService("SoundService")
 
-local Framework = require(ReplicatedStorage:WaitForChild("Framework"))
-local GuiButton = Framework.Util.GuiButton
-local Sound = Framework.Util.Sound
+local Weave = require(ReplicatedStorage:WaitForChild("Weave"))
+local GuiButton = Weave.Util.GuiButton
+local Sound = Weave.Util.Sound
 
 local GUI_SOUNDS_FOLDER = "GuiSounds"
 
 local GuiButtonController = {}
 
-GuiButtonController._trove = nil :: Framework.Trove?
-GuiButtonController.Sounds = nil :: Framework.SoundPlayer?
+GuiButtonController._trove = nil :: Weave.Trove?
+GuiButtonController.Sounds = nil :: Weave.SoundPlayer?
 
 function GuiButtonController:Start()
 	local player = Players.LocalPlayer

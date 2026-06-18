@@ -1,11 +1,11 @@
 [package]
-name = "kiddydevofficial/framework"
+name = "kiddydevofficial/weave"
 version = "0.4.0"
-description = "Goling's Framework — type-first, modular :Init/:Start framework for Roblox / Luau"
+description = "Weave: type-first, modular :Init/:Start framework for Roblox / Luau"
 license = "MIT"
 authors = ["KiddyDevOfficial"]
 registry = "https://github.com/UpliftGames/wally-index"
 realm = "shared"
-include = ["src/Framework/**", "README.md", "LICENSE", "wally.toml", "default.project.json"]
+include = ["src/Weave/**", "README.md", "LICENSE", "wally.toml", "default.project.json"]
 
 [dependencies]

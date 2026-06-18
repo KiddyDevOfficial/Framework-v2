@@ -1,7 +1,7 @@
 --!strict
 --[=[
 	@controller SoundController
-	Singleton wrapper around `Framework.Util.Sound` - one shared sound handler
+	Singleton wrapper around `Weave.Util.Sound` - one shared sound handler
 	for the whole client. Assign a library of template `Sound`s once, then any
 	controller can play them by name by depending on `"SoundController"` (or
 	just requiring this module).
@@ -26,10 +26,10 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local SoundService = game:GetService("SoundService")
 
-local Framework = require(ReplicatedStorage:WaitForChild("Framework"))
-local Sound = Framework.Util.Sound
+local Weave = require(ReplicatedStorage:WaitForChild("Weave"))
+local Sound = Weave.Util.Sound
 
-export type PlayProps = Framework.SoundPlayProps
+export type PlayProps = Weave.SoundPlayProps
 
 local player = Sound.new()
 

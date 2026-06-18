@@ -14,13 +14,13 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local ServerScriptService = game:GetService("ServerScriptService")
 
-local Framework = require(ReplicatedStorage:WaitForChild("Framework"))
+local Weave = require(ReplicatedStorage:WaitForChild("Weave"))
 local DataService = require(ServerScriptService:WaitForChild("Server"):WaitForChild("Services"):WaitForChild("DataService"))
 local LeaderstatsConfig = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Leaderstats"))
 
-export type Class = Framework.LeaderstatsServiceClass
+export type Class = Weave.LeaderstatsServiceClass
 
-local LeaderstatsService: Class = Framework.CreateLeaderstatsService({
+local LeaderstatsService: Class = Weave.CreateLeaderstatsService({
 	Name = "LeaderstatsService",
 	Entries = LeaderstatsConfig.Entries,
 	DataService = DataService,

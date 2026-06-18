@@ -1,6 +1,6 @@
 {
-  "name": "Framework",
+  "name": "Weave",
   "tree": {
-    "$path": "src/Framework"
+    "$path": "src/Weave"
   }
 }

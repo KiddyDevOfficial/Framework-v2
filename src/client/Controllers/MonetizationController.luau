@@ -20,11 +20,11 @@
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
-local Framework = require(ReplicatedStorage:WaitForChild("Framework"))
+local Weave = require(ReplicatedStorage:WaitForChild("Weave"))
 
-export type Class = Framework.MonetizationControllerClass
+export type Class = Weave.MonetizationControllerClass
 
-local MonetizationController: Class = Framework.CreateMonetizationController({
+local MonetizationController: Class = Weave.CreateMonetizationController({
 	Name = "MonetizationController",
 })
 

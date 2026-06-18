@@ -18,12 +18,12 @@
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
-local Framework = require(ReplicatedStorage:WaitForChild("Framework"))
+local Weave = require(ReplicatedStorage:WaitForChild("Weave"))
 local Defaults = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("FFlags"))
 
-export type Class = Framework.FFlagsServiceClass
+export type Class = Weave.FFlagsServiceClass
 
-local FFlagsService: Class = Framework.CreateFFlagsService({
+local FFlagsService: Class = Weave.CreateFFlagsService({
 	Name = "FFlagsService",
 	Defaults = Defaults,
 })

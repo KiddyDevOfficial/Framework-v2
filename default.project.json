@@ -1,11 +1,11 @@
 {
-  "name": "Framework",
+  "name": "Weave",
   "tree": {
     "$className": "DataModel",
 
     "ReplicatedStorage": {
-      "Framework": {
-        "$path": "src/Framework"
+      "Weave": {
+        "$path": "src/Weave"
       },
       "Shared": {
         "$path": "src/shared"

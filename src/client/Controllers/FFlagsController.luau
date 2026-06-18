@@ -16,11 +16,11 @@
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
-local Framework = require(ReplicatedStorage:WaitForChild("Framework"))
+local Weave = require(ReplicatedStorage:WaitForChild("Weave"))
 
-export type Class = Framework.FFlagsControllerClass
+export type Class = Weave.FFlagsControllerClass
 
-local FFlagsController: Class = Framework.CreateFFlagsController({
+local FFlagsController: Class = Weave.CreateFFlagsController({
 	Name = "FFlagsController",
 })
 

@@ -8,9 +8,9 @@
 
 	```lua
 	local ExampleStates = require(ReplicatedStorage.Shared.StateMachines.ExampleStates)
-	local Framework = require(ReplicatedStorage.Framework)
+	local Weave = require(ReplicatedStorage.Weave)
 
-	local group = Framework.StateMachine.group(ExampleStates.config)
+	local group = Weave.StateMachine.group(ExampleStates.config)
 
 	group:transition(player, "Active")
 	group:force(player, "Cooldown")
@@ -27,13 +27,13 @@
 	When each key needs its own `data` shape, use `build` instead:
 
 	```lua
-	local group = Framework.StateMachine.group(ExampleStates.build)
+	local group = Weave.StateMachine.group(ExampleStates.build)
 	```
 ]=]
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
-local Framework = require(ReplicatedStorage:WaitForChild("Framework"))
+local Weave = require(ReplicatedStorage:WaitForChild("Weave"))
 
 export type ExampleData = {
 	ticks: number,
@@ -42,7 +42,7 @@ export type ExampleData = {
 
 local COOLDOWN_DURATION = 2
 
-local config: Framework.StateMachineConfig<ExampleData> = {
+local config: Weave.StateMachineConfig<ExampleData> = {
 	initial = "Idle",
 	data = {
 		ticks = 0,
@@ -75,7 +75,7 @@ local config: Framework.StateMachineConfig<ExampleData> = {
 	},
 }
 
-local function build(_key: any): Framework.StateMachineConfig<ExampleData>
+local function build(_key: any): Weave.StateMachineConfig<ExampleData>
 	return {
 		initial = config.initial,
 		states = config.states,

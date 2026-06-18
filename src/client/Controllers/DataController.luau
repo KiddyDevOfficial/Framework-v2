@@ -17,17 +17,17 @@
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
-local Framework = require(ReplicatedStorage:WaitForChild("Framework"))
+local Weave = require(ReplicatedStorage:WaitForChild("Weave"))
 local DataTemplate = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("DataTemplate"))
 
 type PlayerData = DataTemplate.DataTemplate
 type PlayerDataPath = DataTemplate.Path
 type PlayerDataArrayPath = DataTemplate.ArrayPath
 
-export type Class = Framework.DataControllerClass<PlayerData, PlayerDataPath, PlayerDataArrayPath>
+export type Class = Weave.DataControllerClass<PlayerData, PlayerDataPath, PlayerDataArrayPath>
 export type Path = PlayerDataPath
 
-local DataController: Class = Framework.CreateDataController({
+local DataController: Class = Weave.CreateDataController({
 	Name = "DataController",
 	Template = DataTemplate,
 })

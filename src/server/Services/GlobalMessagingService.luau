@@ -19,11 +19,11 @@
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
-local Framework = require(ReplicatedStorage:WaitForChild("Framework"))
+local Weave = require(ReplicatedStorage:WaitForChild("Weave"))
 
-export type Class = Framework.GlobalMessagingServiceClass
+export type Class = Weave.GlobalMessagingServiceClass
 
-local GlobalMessagingService: Class = Framework.CreateGlobalMessagingService({
+local GlobalMessagingService: Class = Weave.CreateGlobalMessagingService({
 	Name = "GlobalMessagingService",
 })
 

@@ -3,7 +3,7 @@
 	@script Client
 	Client entry point. Discovers controllers under `script.Controllers`
 	(and, if present, `script.UI/Controllers` + `script.UI/Frames`),
-	registers shared components, then boots the framework.
+	registers shared components, then boots Weave.
 
 	Layout:
 	  Controllers/     - game-logic controllers (e.g. ExampleController)
@@ -14,34 +14,34 @@
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
-local Framework = require(ReplicatedStorage:WaitForChild("Framework"))
+local Weave = require(ReplicatedStorage:WaitForChild("Weave"))
 
 local controllersFolder = script:FindFirstChild("Controllers")
 if controllersFolder then
-	Framework.AddControllers(controllersFolder)
+	Weave.AddControllers(controllersFolder)
 end
 
 local uiFolder = script:FindFirstChild("UI")
 if uiFolder then
 	local uiControllers = uiFolder:FindFirstChild("Controllers")
 	if uiControllers then
-		Framework.AddControllers(uiControllers)
+		Weave.AddControllers(uiControllers)
 	end
 
 	local uiFrames = uiFolder:FindFirstChild("Frames")
 	if uiFrames then
-		Framework.AddControllers(uiFrames)
+		Weave.AddControllers(uiFrames)
 	end
 end
 
 local sharedFolder = ReplicatedStorage:FindFirstChild("Shared")
 local componentsFolder = sharedFolder and sharedFolder:FindFirstChild("Components")
 if componentsFolder then
-	Framework.AddComponents(componentsFolder)
+	Weave.AddComponents(componentsFolder)
 end
 
-Framework.OnStart(function()
-	print("[Framework] Client started.")
+Weave.OnStart(function()
+	print("[Weave] Client started.")
 end)
 
-Framework.Start()
+Weave.Start()

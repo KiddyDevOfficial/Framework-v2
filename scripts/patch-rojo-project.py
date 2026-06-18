@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Patch a Rojo project.json for Framework installation."""
+"""Patch a Rojo project.json for Weave installation."""
 
 from __future__ import annotations
 
@@ -27,13 +27,13 @@ def ensure_packages(data: dict) -> bool:
     return True
 
 
-def ensure_framework_mount(data: dict, framework_path: str) -> bool:
+def ensure_weave_mount(data: dict, weave_path: str) -> bool:
     tree = data.setdefault("tree", {})
     rs = tree.setdefault("ReplicatedStorage", {"$className": "ReplicatedStorage"})
-    rel = framework_path.replace("\\", "/")
-    if rs.get("Framework") == {"$path": rel}:
+    rel = weave_path.replace("\\", "/")
+    if rs.get("Weave") == {"$path": rel}:
         return False
-    rs["Framework"] = {"$path": rel}
+    rs["Weave"] = {"$path": rel}
     return True
 
 
@@ -41,7 +41,7 @@ def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("project", type=Path)
     parser.add_argument("--packages", action="store_true")
-    parser.add_argument("--framework-src", type=Path, default=None)
+    parser.add_argument("--weave-src", type=Path, default=None)
     args = parser.parse_args()
 
     data = load_project(args.project)
@@ -51,13 +51,13 @@ def main() -> int:
         print(f"Added ReplicatedStorage.Packages in {args.project.name}")
         changed = True
 
-    if args.framework_src is not None:
+    if args.weave_src is not None:
         rel = os.path.relpath(
-            args.framework_src.resolve(),
+            args.weave_src.resolve(),
             args.project.parent.resolve(),
         )
-        if ensure_framework_mount(data, rel):
-            print(f"Mounted ReplicatedStorage.Framework -> {rel.replace(os.sep, '/')}")
+        if ensure_weave_mount(data, rel):
+            print(f"Mounted ReplicatedStorage.Weave -> {rel.replace(os.sep, '/')}")
             changed = True
 
     if changed:

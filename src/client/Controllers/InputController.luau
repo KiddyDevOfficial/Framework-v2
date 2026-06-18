@@ -1,7 +1,7 @@
 --!strict
 --[=[
 	@controller InputController
-	Singleton wrapper around `Framework.Util.Input` - one shared action map for
+	Singleton wrapper around `Weave.Util.Input` - one shared action map for
 	the whole client. Bind actions here and any controller can reach them by
 	depending on `"InputController"` (or just requiring this module).
 
@@ -35,13 +35,13 @@
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
-local Framework = require(ReplicatedStorage:WaitForChild("Framework"))
-local Input = Framework.Util.Input
+local Weave = require(ReplicatedStorage:WaitForChild("Weave"))
+local Input = Weave.Util.Input
 
-type InputMap = Framework.InputMap
-type Button = Framework.InputButton
-type Device = Framework.InputDevice
-type Connection = Framework.Connection
+type InputMap = Weave.InputMap
+type Button = Weave.InputButton
+type Device = Weave.InputDevice
+type Connection = Weave.Connection
 
 local map = Input.new()
 
