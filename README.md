@@ -223,6 +223,7 @@ Atlas is a **gameplay framework**, not an ECS or a custom replication engine. It
 | **GlobalMessaging** | Cross-server [MessagingService](https://create.roblox.com/docs/reference/engine/classes/MessagingService) topics. |
 | **FFlags** | Live runtime flags synced across servers. |
 | **Leaderstats** | Mirrors `DataService` paths into leaderstats folders. |
+| **Analytics** | Crash-safe `AnalyticsService` wrapper (economy, progression, funnels). |
 | **GlobalSignals** | In-process signal banks (same VM, not remotes). |
 | **Util** | Trove, Promise, StateMachine, Spring, Input, Sound, and more. |
 | **Signal / Enum / Symbol / Types** | Core primitives (`Option<T>`, `Result<T, E>`, type-safe events). |
@@ -242,7 +243,8 @@ Everything lives on the root `Atlas` table:
 | **GlobalMessaging** | `CreateGlobalMessagingService`, `GlobalMessaging.Bank` |
 | **FFlags** | `CreateFFlagsService`, `CreateFFlagsController` |
 | **Leaderstats** | `CreateLeaderstatsService` |
-| **Util** | `Trove`, `Promise`, `StateMachine`, `Spring`, `Input`, `Sound`, `Log`, `DebugOverlay`, … |
+| **Analytics** | `CreateAnalyticsService`, `Analytics.server` |
+| **Util** | `Trove`, `Promise`, `StateMachine`, `Spring`, `Zone`, `Input`, `Sound`, `Log`, `DebugOverlay`, … |
 
 > **Runtime note:** generic call syntax like `CreateDataService<T>({ ... })` is type-checker only. At runtime, annotate the result instead: `local svc: Class = Atlas.CreateDataService({ ... })`.
 
@@ -441,6 +443,45 @@ Values update automatically whenever data changes through `DataService`.
 
 ---
 
+## Analytics
+
+A crash-proof wrapper over Roblox [AnalyticsService](https://create.roblox.com/docs/production/analytics/analytics-events). Every log call is wrapped in `pcall`, so a telemetry failure never propagates into gameplay code, and each returns whether the call landed. Flow and progression fields accept a string *or* the matching `EnumItem`. Server-only.
+
+```lua
+-- server/Services/AnalyticsService.luau
+return Atlas.CreateAnalyticsService({ Name = "AnalyticsService" })
+```
+
+```lua
+local Analytics = require(ServerScriptService.Server.Services.AnalyticsService)
+
+-- Economy: track currency sources and sinks.
+Analytics:LogEconomyEvent(player, {
+    flowType = "Sink",            -- or Enum.AnalyticsEconomyFlowType.Sink
+    currencyType = "Coins",
+    amount = 100,
+    endingBalance = 400,
+    transactionType = "Shop",     -- Gameplay | Shop | IAP | TimedReward | ...
+    itemSku = "SwordOfTruth",
+})
+
+-- Progression: where players start, complete, or drop off.
+Analytics:LogProgressionEvent(player, {
+    path = "Tutorial",
+    status = "Complete",          -- Start | Complete | Fail | Custom
+    level = 1,
+})
+
+-- Funnels, onboarding steps, and arbitrary custom events.
+Analytics:LogFunnelStep(player, { funnelName = "Shop", step = 2, stepName = "OpenedCart" })
+Analytics:LogOnboardingStep(player, { step = 1, stepName = "PickedAvatar" })
+Analytics:LogCustomEvent(player, { name = "BossDefeated", value = 1 })
+```
+
+Unknown enum strings are reported (toggle with the `WarnOnError` option) and the call is skipped rather than thrown.
+
+---
+
 ## Global signals
 
 Lightweight in-process events for modules in the same server or client VM. Not remotes. Use `Networking` for client/server and `GlobalMessaging` for cross-server.
@@ -495,6 +536,18 @@ cam:setTarget(targetPosition)
 -- call cam:step(dt) each frame
 ```
 
+**Zone** for spatial triggers. Hand it a part, a list of parts, or a model/folder of parts and it polls the region on an interval, firing signals as players (and any instances you explicitly `watch`) enter and leave. Detection uses an Include-filtered `OverlapParams`, so each poll only tests the characters you care about. Works on server or client.
+
+```lua
+local zone = Atlas.Zone.new(workspace.SafeRoom)
+zone.playerEntered:connect(function(player) print(player.Name, "entered") end)
+zone.playerExited:connect(function(player) print(player.Name, "left") end)
+
+-- Or define a region with no part at all:
+local box = Atlas.Zone.fromBox(CFrame.new(0, 5, 0), Vector3.new(20, 10, 20))
+-- zone:destroy() when done
+```
+
 **Input** is a device-agnostic action map with rebind support. The shipped `InputController` wraps a shared map as a singleton.
 
 | Module | Purpose |
@@ -504,6 +557,7 @@ cam:setTarget(targetPosition)
 | `Observer` | Observer functions (`observeTag`, `observeProperty`, `observeAttribute`, `observeChildren`, `observePlayer`, `observeCharacter`). |
 | `StateMachine` | Finite state machines + per-key groups. |
 | `Spring` | Damped harmonic oscillator for smooth motion. |
+| `Zone` | Spatial trigger volumes with player/instance enter/exit signals. |
 | `Queue` / `Cache` | FIFO queue and LRU/TTL memoization. |
 | `Input` | Named action bindings across devices. |
 | `AssetPreloader` | `ContentProvider:PreloadAsync` with progress. |

@@ -24,6 +24,7 @@ local AssetPreloader = require(script.AssetPreloader)
 local Log = require(script.Log)
 local DebugOverlay = require(script.DebugOverlay)
 local Sound = require(script.Sound)
+local Zone = require(script.Zone)
 
 local Util = {
 	Trove = Trove,
@@ -44,6 +45,7 @@ local Util = {
 	Log = Log,
 	DebugOverlay = DebugOverlay,
 	Sound = Sound,
+	Zone = Zone,
 }
 
 export type Trove = Trove.Trove
@@ -75,5 +77,7 @@ export type DebugOverlayOptions = DebugOverlay.Options
 export type SoundPlayer = Sound.SoundPlayer
 export type SoundOptions = Sound.Options
 export type SoundPlayProps = Sound.PlayProps
+export type Zone = Zone.Zone
+export type ZoneBox = Zone.Box
 
 return Util
