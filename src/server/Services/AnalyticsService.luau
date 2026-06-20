@@ -11,18 +11,18 @@
 	local Analytics = require(ServerScriptService.Server.Services.AnalyticsService)
 
 	Analytics:LogEconomyEvent(player, {
-	    flowType = "Sink",            -- or Enum.AnalyticsEconomyFlowType.Sink
-	    currencyType = "Coins",
-	    amount = 100,
-	    endingBalance = 400,
-	    transactionType = "Shop",     -- Gameplay | Shop | IAP | TimedReward | ...
-	    itemSku = "SwordOfTruth",
+		flowType = "Sink",	-- or Enum.AnalyticsEconomyFlowType.Sink
+		currencyType = "Coins",
+		amount = 100,
+		endingBalance = 400,
+		transactionType = "Shop",     
+		itemSku = "SwordOfTruth",
 	})
 
 	Analytics:LogProgressionEvent(player, {
-	    path = "Tutorial",
-	    status = "Complete",          -- Start | Complete | Fail | Custom
-	    level = 1,
+		path = "Tutorial",
+		status = "Complete",         
+		level = 1,
 	})
 	```
 ]=]
